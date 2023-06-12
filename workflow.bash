@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ## This is the main entry of the workflow bashscript file. We can call some sub-scripts here if 
 ## we want to make it a bit more modular.
 
