@@ -98,10 +98,10 @@ RNA_READS_DIR=reads
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
 declare -A categories;                           declare -a order;
-categories["Quality Control"]="FastQC MultiQC"; order+=("Quality Control")
-categories["Assembly"]="SPAdes Trinity STRING";                order+=("Assembly")
-categories["Mapping"]="BWA HISAT STAR";                    order+=("Mapping")
-categories["Variant Calling"]="FreeBayes BCFTools"; order+=("Variant Calling")
+categories["Quality Control"]="FastQC,MultiQC"; order+=("Quality Control")
+categories["Assembly"]="SPAdes,Trinity,STRING";                order+=("Assembly")
+categories["Mapping"]="BWA,HISAT,STAR";                    order+=("Mapping")
+categories["Variant Calling"]="FreeBayes,BCFTools"; order+=("Variant Calling")
 categories["Annotation"]="SnpEff";              order+=("Annotation")
 
 
@@ -118,15 +118,25 @@ programs["FreeBayes"]=0;                        order_programs+=("FreeBayes")
 programs["BCFTools"]=0;                         order_programs+=("BCFTools")
 programs["SnpEff"]=0;                           order_programs+=("SnpEff")
 
-## Call display_menu for each category values, and change the value of the selected program to 1. Multiple programs can be selected for each category
+
+## Display a menu for each category, and allow the user to select which programs they want to run
+## If multiple are selected, they are returned as space delimited
+## Switch the names in programs to 1 if they are selected
+for category in "${order[@]}"; do
+  echo -e "\e[1m$category: \e[0m"
+  selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
+  for program in "${order_programs[@]}"; do
+    if [[ " ${selected_options[@]} " =~ " $program " ]]; then
+      programs[$program]=1
+    fi
+  done
+done
 
 
-# for category in "${order[@]}"; do
-#   selected=$(display_menu "Which $category should be used?" ${categories[$category]})
-#   programs[$selected]=1
-# done
 
-## Echo the selected programs, which will be used in the workflow
+#
+#
+# ## Echo the selected programs, which will be used in the workflow
 echo -e "\e[1mSelected Programs: \e[0m"
 for program in "${order_programs[@]}"; do
   if [ "${programs[$program]}" -eq 1 ]; then
@@ -135,5 +145,5 @@ for program in "${order_programs[@]}"; do
 done
 
 
-echo -e "\e[1mRunning Workflow: \e[0m"
+# echo -e "\e[1mRunning Workflow: \e[0m"
 
