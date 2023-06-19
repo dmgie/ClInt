@@ -75,6 +75,8 @@ FREEBAYES_PATH=freebayes
 VCFUTILS_PATH=vcfutils.pl
 SNPEFF_PATH=snpeff.jar
 SNPEFF_CONFIG_PATH=snpEff.config
+FASTP=./scripts/fastp
+MINIMAP2=./scripts/minimap2/minimap2
 # .... a lot more needed
 
 
@@ -98,8 +100,8 @@ RNA_READS_DIR=reads
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
 declare -A categories;                           declare -a order;
-categories["Quality Control"]="FastQC,MultiQC"; order+=("Quality Control")
-categories["Assembly"]="SPAdes,Trinity,STRING";                order+=("Assembly")
+categories["Quality Control"]="FastQC,MultiQC,fastp"; order+=("Quality Control")
+categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";                order+=("Assembly")
 categories["Mapping"]="BWA,HISAT,STAR";                    order+=("Mapping")
 categories["Variant Calling"]="FreeBayes,BCFTools"; order+=("Variant Calling")
 categories["Annotation"]="SnpEff";              order+=("Annotation")
@@ -108,15 +110,19 @@ categories["Annotation"]="SnpEff";              order+=("Annotation")
 declare -A programs;                            declare -a order_programs;
 programs["FastQC"]=0;                           order_programs+=("FastQC")
 programs["MultiQC"]=0;                          order_programs+=("MultiQC")
+programs["fastp"]=0;                            order_programs+=("fastp")
 programs["SPAdes"]=0;                           order_programs+=("SPAdes")
-programs["Trinity"]=0;                           order_programs+=("Trinity")
+programs["Trinity"]=0;                          order_programs+=("Trinity")
 programs["STRING"]=0;                           order_programs+=("STRING")
+programs["minimap2"]=0;                         order_programs+=("minimap2")
 programs["HISAT"]=0;                            order_programs+=("HISAT")
 programs["STAR"]=0;                             order_programs+=("STAR")
 programs["BWA"]=0;                              order_programs+=("BWA")
 programs["FreeBayes"]=0;                        order_programs+=("FreeBayes")
 programs["BCFTools"]=0;                         order_programs+=("BCFTools")
 programs["SnpEff"]=0;                           order_programs+=("SnpEff")
+
+
 
 
 ## Display a menu for each category, and allow the user to select which programs they want to run
@@ -145,5 +151,44 @@ for program in "${order_programs[@]}"; do
 done
 
 
+
+
+#### Quality Control ####
+
+## FastQC
+if [ "${programs[FastQC]}" -eq 1 ]; then
+   ./scripts/fastqc_subscript.bash "$INPUT_GENOME_PATH"\
+                                   "$OUTPUT_DIR"
+fi
+
+## fastp
+if [ "${programs[fastp]}" -eq 1 ]; then
+   ./scripts/fastp_subscript.bash "$INPUT_GENOME_PATH"\
+                                  "$OUTPUT_DIR"
+fi
+
+
+
+#### Assembly ####
+if [ "${programs[minimap2]}" -eq 1 ]; then
+  if [ "${programs[fastp]}" -eq 1 ]; then
+    ./scripts/minimap2_subscript.bash "$HUMAN_REFERENCE_PATH"\
+                                      "$INPUT_GENOME_PATH"\
+		              "$OUTPUT_DIR"
+  else
+    echo "When using an assembler, you should use fastp first to ensure
+          only high quality reads being used."
+  fi
+fi
+
+
+
 # echo -e "\e[1mRunning Workflow: \e[0m"
+
+
+
+## DNA Pipeline
+#echo "DNA pipeline starting"
+#./scripts/dna_pipeline.sh "$INPUT_GENOME_PATH" "$OUTPUT_DIR" "$HUMAN_REFERENCE_PATH"
+
 
