@@ -158,14 +158,14 @@ category_chooser() {
 _print_selected(){
     # TODO: MAke this print under each category the programs used. Use the value from category to get the programs and see if
     # they are 1 or 0
-    echo -e "\e[1mSelected Programs: \e[0m"
+    echo -e "\e[4m\e[1mSelected Programs: \e[0m\e[0m"
     for category in "${categories_order[@]}"; do
         echo -e "   \e[1m$category: \e[0m"
         # For each program in the category, check if it is selected, and if so, print it
         category_programs=${categories[$category]}
         for program in $(echo $category_programs | sed "s/,/ /g"); do
             if [ "${programs[$program]}" -eq 1 ]; then
-                echo -e "      $program"
+                echo -e "       $program"
             fi
         done
     done
