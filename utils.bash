@@ -33,3 +33,31 @@ display_menu() {
 
     echo "${selected_options[@]}"
 }
+
+
+# Used as thread/core variable in the workflow
+get_core_count() {
+    local prompt="Enter the number of cores to use"
+    # Check how many cores the system has
+    local num_cores=$(grep -c ^processor /proc/cpuinfo)
+
+    # 1/8th of the cores would seem like a good amount?
+    local default=$((num_cores/8))
+
+    local core_count
+
+    while true; do
+        read -rp "$prompt [Default: $default / Available: $num_cores]: " core_count
+        if [[ -z $core_count ]]; then
+            core_count=$default
+            break
+        elif [[ $core_count =~ ^[1-9][0-9]*$ ]]; then
+            break
+        else
+            echo "Invalid core count. Please try again." >&2
+        fi
+    done
+
+    echo $core_count
+}
+

@@ -6,7 +6,7 @@
 ## Import shared functions
 source ./utils.bash
 
-## Set up various (environment) variables that we will use throughout the workflow
+## Set up various (environment) variables that we will use throughout the workflow, these are default?
 NUM_CORES=8
 NUM_THREADS=8
 MAX_RAM_GB=32
@@ -157,16 +157,22 @@ category_chooser() {
 _print_selected(){
     # TODO: MAke this print under each category the programs used. Use the value from category to get the programs and see if
     # they are 1 or 0
-    # Echo the selected programs, which will be used in the workflow, use "--" to separate the programs by category
     echo -e "\e[1mSelected Programs: \e[0m"
     for category in "${order[@]}"; do
-        echo -e "\e[1m$category: \e[0m"
-        ## 
-
+        echo -e "   \e[1m$category: \e[0m"
+        # For each program in the category, check if it is selected, and if so, print it
+        category_programs=${categories[$category]}
+        for program in $(echo $category_programs | sed "s/,/ /g"); do
+            if [ "${programs[$program]}" -eq 1 ]; then
+                echo -e "      $program"
+            fi
+        done
     done
 }
 
+NUM_CORES=$(get_core_count)
 category_chooser
+
 
 # echo -e "\e[1mRunning Workflow: \e[0m"
 
