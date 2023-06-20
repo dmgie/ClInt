@@ -3,13 +3,14 @@
 ## This is the main entry of the workflow bashscript file. We can call some sub-scripts here if 
 ## we want to make it a bit more modular.
 
-## Import shared functions
+## Import some shared functions
 source ./utils.bash
 
 ## Set up various (environment) variables that we will use throughout the workflow, these are default?
-NUM_CORES=8
-NUM_THREADS=8
-MAX_RAM_GB=32
+## NOTE: Can be skipped, we do prompt-based input instead (below)
+# NUM_CORES=8
+# NUM_THREADS=8
+# MAX_RAM_GB=32
 
 ## Argument Parsing: Long and short form
 _setArgs(){
@@ -45,21 +46,20 @@ _setArgs(){
   done
 }
 
-_arg_log(){
-    # Script argument logging function
-    echo -e "\e[1m    $1:\t\e[0m $2 "
-}
 _log(){
     # Log the script arguments to see what was used
     echo "Ran script at: [$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
     echo -e "\e[32mUsed Arguments:\e[0m"
     # Bold escape sequence for the input arguments until the colon
-    _arg_log "Input Genome" "$INPUT_GENOME_PATH"
-    _arg_log "Human Reference" "$HUMAN_REFERENCE_PATH"
-    _arg_log "Human Reference GFF" "$HUMAN_REFERENCE_GFF_PATH"
-    _arg_log "Output Directory" "$OUTPUT_DIR"
+    _log_format "Input Genome" "$INPUT_GENOME_PATH"
+    _log_format "Human Reference" "$HUMAN_REFERENCE_PATH"
+    _log_format "Human Reference GFF" "$HUMAN_REFERENCE_GFF_PATH"
+    _log_format "Output Directory" "$OUTPUT_DIR"
 }
-
+_log_format(){
+    # Script argument logging function
+    echo -e "\e[1m    $1:\t\e[0m $2 "
+}
 
 ## Set up the paths/program names to the various tools
 # TODO: Make it read from a template file instead of hardcoding it here
@@ -95,16 +95,14 @@ RNA_READS_DIR=reads
 
 ######################################################### Workflow ########################################################
 
-# TODO: Do we do all the question/selection beforehand, or as we go along?
-
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
-declare -A categories;                           declare -a order;
-categories["Quality Control"]="FastQC,MultiQC,fastp"; order+=("Quality Control")
-categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";                order+=("Assembly")
-categories["Mapping"]="BWA,HISAT,STAR";                    order+=("Mapping")
-categories["Variant Calling"]="FreeBayes,BCFTools"; order+=("Variant Calling")
-categories["Annotation"]="SnpEff";              order+=("Annotation")
+declare -A categories;                                      declare -a order;
+categories["Quality Control"]="FastQC,MultiQC,fastp";       order+=("Quality Control")
+categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";    order+=("Assembly")
+categories["Mapping"]="BWA,HISAT,STAR";                     order+=("Mapping")
+categories["Variant Calling"]="FreeBayes,BCFTools";         order+=("Variant Calling")
+categories["Annotation"]="SnpEff";                          order+=("Annotation")
 
 
 declare -A programs;                            declare -a order_programs;
@@ -170,14 +168,15 @@ _print_selected(){
     done
 }
 
+
+
+## Ask for CORE and RAM 
 NUM_CORES=$(get_core_count)
+MAX_RAM=$(get_available_ram)
 category_chooser
 
 
-# echo -e "\e[1mRunning Workflow: \e[0m"
-
-
-
+echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 #### Quality Control ####
 
@@ -206,10 +205,6 @@ if [ "${programs[minimap2]}" -eq 1 ]; then
           only high quality reads being used."
   fi
 fi
-
-
-
-# echo -e "\e[1mRunning Workflow: \e[0m"
 
 
 
