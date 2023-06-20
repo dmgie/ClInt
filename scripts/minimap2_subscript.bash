@@ -15,7 +15,7 @@ for file in ../output/fastp_output*.fq; do
   base_name=$(basename "$file" _trimmed.fastq)
 
     
-  ./scripts/minimap2/minimap2 -a "$human_reference"\
+  ../programs/minimap2/minimap2 -a "$human_reference"\
                                  "$file" >\ 
                                  "${output_dir_minimap2}/${base_name}_alignment.sam"
 

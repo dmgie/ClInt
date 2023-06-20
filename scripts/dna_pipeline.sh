@@ -32,7 +32,7 @@ for file in "$input_dir"/*.fastq; do
 
     # Assembly using minimap2
     echo "Start assembly"
-    ./scripts/minimap2/minimap2 -a "$human_reference" "${output_dir_fastp}/${base_name}_trimmed.fq" > "${output_dir_minimap2}/${base_name}_alignment.sam"
+    ../programs/minimap2/minimap2 -a "$human_reference" "${output_dir_fastp}/${base_name}_trimmed.fq" > "${output_dir_minimap2}/${base_name}_alignment.sam"
 
     
     echo "The file $file has been processed."

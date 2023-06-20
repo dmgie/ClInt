@@ -15,7 +15,7 @@ for file in "$input_dir"*.fastq; do
    base_name=$(basename "$file" .fastq)
 
    # Perform quality checking / preprocessing with fastp
-   ./scripts/fastp -i "$file" \
+   ../programs/fastp -i "$file" \
                    -o "${output_dir_fastp}/${base_name}_trimmed.fq" \
                    --json /dev/null \
                    --html /dev/null
