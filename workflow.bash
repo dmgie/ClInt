@@ -13,6 +13,8 @@ source ./utils.bash
 # MAX_RAM_GB=32
 
 ## Argument Parsing: Long and short form
+## TODO: Do we even want this? Maybe prompt for user input? 
+## It might get unwieldy if we have a lot of arguments for every program
 _setArgs(){
   while [ "${1:-}" != "" ]; do
     case "$1" in
@@ -97,12 +99,12 @@ RNA_READS_DIR=reads
 
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
-declare -A categories;                                      declare -a order;
-categories["Quality Control"]="FastQC,MultiQC,fastp";       order+=("Quality Control")
-categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";    order+=("Assembly")
-categories["Mapping"]="BWA,HISAT,STAR";                     order+=("Mapping")
-categories["Variant Calling"]="FreeBayes,BCFTools";         order+=("Variant Calling")
-categories["Annotation"]="SnpEff";                          order+=("Annotation")
+declare -A categories;                                      declare -a categories_order;
+categories["Quality Control"]="FastQC,MultiQC,fastp";       categories_order+=("Quality Control")
+categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";    categories_order+=("Assembly")
+categories["Mapping"]="BWA,HISAT,STAR";                     categories_order+=("Mapping")
+categories["Variant Calling"]="FreeBayes,BCFTools";         categories_order+=("Variant Calling")
+categories["Annotation"]="SnpEff";                          categories_order+=("Annotation")
 
 
 declare -A programs;                            declare -a order_programs;
@@ -133,7 +135,8 @@ _reset_programs(){
 ## If multiple are selected, they are returned as space delimited
 ## Switch the names in programs to 1 if they are selected
 category_chooser() {
-    for category in "${order[@]}"; do
+    # TODO: Maybe make sure at least one option is selected?
+    for category in "${categories_order[@]}"; do
         echo -e "\e[1m$category: \e[0m"
         selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
         for program in "${order_programs[@]}"; do
@@ -156,7 +159,7 @@ _print_selected(){
     # TODO: MAke this print under each category the programs used. Use the value from category to get the programs and see if
     # they are 1 or 0
     echo -e "\e[1mSelected Programs: \e[0m"
-    for category in "${order[@]}"; do
+    for category in "${categories_order[@]}"; do
         echo -e "   \e[1m$category: \e[0m"
         # For each program in the category, check if it is selected, and if so, print it
         category_programs=${categories[$category]}
