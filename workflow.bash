@@ -125,30 +125,50 @@ programs["SnpEff"]=0;                           order_programs+=("SnpEff")
 
 
 
+_reset_programs(){
+  for program in "${order_programs[@]}"; do
+    programs[$program]=0
+  done
+}
+
 ## Display a menu for each category, and allow the user to select which programs they want to run
 ## If multiple are selected, they are returned as space delimited
 ## Switch the names in programs to 1 if they are selected
-for category in "${order[@]}"; do
-  echo -e "\e[1m$category: \e[0m"
-  selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
-  for program in "${order_programs[@]}"; do
-    if [[ " ${selected_options[@]} " =~ " $program " ]]; then
-      programs[$program]=1
-    fi
-  done
-done
+category_chooser() {
+    for category in "${order[@]}"; do
+        echo -e "\e[1m$category: \e[0m"
+        selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
+        for program in "${order_programs[@]}"; do
+            if [[ " ${selected_options[@]} " =~ " $program " ]]; then
+                programs[$program]=1
+            fi
+        done
+    done
+    # Ask if the choices were correct
+    echo -e "\e[1mAre these choices correct? \e[0m"
+    _print_selected
+    select yn in "Yes" "No"; do
+        case $yn in
+            Yes ) break;;
+            No ) _reset_programs; category_chooser; break;;
+        esac
+    done
+}
+_print_selected(){
+    # TODO: MAke this print under each category the programs used. Use the value from category to get the programs and see if
+    # they are 1 or 0
+    # Echo the selected programs, which will be used in the workflow, use "--" to separate the programs by category
+    echo -e "\e[1mSelected Programs: \e[0m"
+    for category in "${order[@]}"; do
+        echo -e "\e[1m$category: \e[0m"
+        ## 
 
+    done
+}
 
+category_chooser
 
-#
-#
-# ## Echo the selected programs, which will be used in the workflow
-echo -e "\e[1mSelected Programs: \e[0m"
-for program in "${order_programs[@]}"; do
-  if [ "${programs[$program]}" -eq 1 ]; then
-    echo "  $program"
-  fi
-done
+# echo -e "\e[1mRunning Workflow: \e[0m"
 
 
 
