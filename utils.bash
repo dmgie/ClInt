@@ -8,6 +8,12 @@ display_menu() {
     # Set the Internal Field Separator (IFS) to comma
     IFS=',' read -ra options <<< "$options_string"
 
+    # trim newlines
+    prompt=${prompt//$'\n'/}
+
+    # trim whitespace
+    prompt=${prompt//$'\t'/}
+
     local num_options=${#options[@]}
 
     echo "$prompt" >&2
