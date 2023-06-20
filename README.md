@@ -1,4 +1,4 @@
-# CLint
+# ClInt
 
 
 ## Installation Procedure
