@@ -104,9 +104,9 @@ RNA_Questionnaire() {
     # RNA-based questionnaire
     declare -A rna_categories;                                      declare -a rna_categories_order;
     rna_categories["Quality Control"]="FastQC,\
-    MultiQC,\
-    fastp (All-in-one),\
-    TrimGalore";                                         rna_categories_order+=("Quality Control")
+MultiQC,\
+fastp (All-in-one),\
+TrimGalore";                                         rna_categories_order+=("Quality Control")
     rna_categories["Assembly"]="SPAdes,Trinity,STRING,minimap2"; rna_categories_order+=("Assembly")
     rna_categories["Mapping"]="BWA,HISAT,STAR";                  rna_categories_order+=("Mapping")
     rna_categories["Variant Calling"]="FreeBayes,BCFTools";      rna_categories_order+=("Variant Calling")

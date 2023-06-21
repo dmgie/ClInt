@@ -32,6 +32,12 @@ display_menu() {
             break
         elif [[ $choice =~ ^[1-$num_options]$ ]]; then
             selected_options+=("${options[choice-1]}")
+        # if comma separated list is entered
+        elif [[ $choice =~ ^[1-$num_options](,[1-$num_options])*$ ]]; then
+            IFS=',' read -ra choices <<< "$choice"
+            for choice in "${choices[@]}"; do
+                selected_options+=("${options[choice-1]}")
+            done
         else
             echo "Invalid choice. Please try again." >&2
         fi
