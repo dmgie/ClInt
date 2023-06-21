@@ -8,6 +8,12 @@ display_menu() {
     # Set the Internal Field Separator (IFS) to comma
     IFS=',' read -ra options <<< "$options_string"
 
+    # trim newlines
+    prompt=${prompt//$'\n'/}
+
+    # trim whitespace
+    prompt=${prompt//$'\t'/}
+
     local num_options=${#options[@]}
 
     echo "$prompt" >&2
@@ -32,4 +38,58 @@ display_menu() {
     done
 
     echo "${selected_options[@]}"
+}
+
+
+# Used as thread/core variable in the workflow
+get_core_count() {
+    local prompt="Enter the number of cores to use"
+    # Check how many cores the system has
+    local num_cores=$(grep -c ^processor /proc/cpuinfo)
+
+    # 1/8th of the cores would seem like a good amount?
+    local default=$((num_cores/8))
+
+    local core_count
+
+    while true; do
+        read -rp "$prompt [Default: $default / Available: $num_cores]: " core_count
+        if [[ -z $core_count ]]; then
+            core_count=$default
+            break
+        elif [[ $core_count =~ ^[1-9][0-9]*$ ]]; then
+            break
+        else
+            echo "Invalid core count. Please try again." >&2
+        fi
+    done
+
+    echo $core_count
+}
+
+get_available_ram() {
+    local prompt="Enter the amount of RAM to use (in GB)"
+    # Check how much RAM the system has
+    local total_ram=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    local total_ram_gb=$((total_ram/1024/1024))
+
+    # 1/8th of the RAM would seem like a good amount?
+    local default=$((total_ram_gb/8))
+
+    local ram_gb
+
+    while true; do
+        read -rp "$prompt [Default: $default / Available: $total_ram_gb]: " ram_gb
+        if [[ -z $ram_gb ]]; then
+            ram_gb=$default
+            break
+        elif [[ $ram_gb =~ ^[1-9][0-9]*$ ]]; then
+            break
+        else
+            echo "Invalid RAM amount. Please try again." >&2
+        fi
+    done
+
+    echo $ram_gb
+
 }
