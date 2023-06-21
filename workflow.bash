@@ -155,6 +155,8 @@ done
 
 #### Quality Control ####
 
+PROCESSED_READS_DIR="$INPUT_GENOME_PATH"
+
 ## FastQC
 if [ "${programs[FastQC]}" -eq 1 ]; then
    ./scripts/fastqc_subscript.bash "$INPUT_GENOME_PATH"\
@@ -165,20 +167,22 @@ fi
 if [ "${programs[fastp]}" -eq 1 ]; then
    ./scripts/fastp_subscript.bash "$INPUT_GENOME_PATH"\
                                   "$OUTPUT_DIR"
+
+    PROCESSED_READS_DIR="${OUTPUT_DIR}/fastp_output"
 fi
 
 
 
 #### Assembly ####
 if [ "${programs[minimap2]}" -eq 1 ]; then
-  if [ "${programs[fastp]}" -eq 1 ]; then
+  #if [ "${programs[fastp]}" -eq 1 ]; then
     ./scripts/minimap2_subscript.bash "$HUMAN_REFERENCE_PATH"\
-                                      "$INPUT_GENOME_PATH"\
-		              "$OUTPUT_DIR"
-  else
-    echo "When using an assembler, you should use fastp first to ensure
-          only high quality reads being used."
-  fi
+                                      "$PROCESSED_READS_DIR"\
+		                                  "$OUTPUT_DIR"
+  #else
+    #echo "When using an assembler, you should use fastp first to ensure
+    #      only high quality reads being used."
+  #fi
 fi
 
 

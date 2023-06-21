@@ -9,7 +9,7 @@ mkdir -p "$output_dir_fastp"
 ## fastp
 echo "Running fastp"
 
-for file in "$input_dir"*.fastq; do
+for file in "${input_dir}/"*.fastq *.fq; do
 
    # Extract the filename without extension
    base_name=$(basename "$file" .fastq)

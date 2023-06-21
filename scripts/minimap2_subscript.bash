@@ -7,19 +7,24 @@ output_dir="$3"
 output_dir_minimap2="${output_dir}/minimap2_output"
 mkdir -p "$output_dir_minimap2"
 
-echo "Start assembly using minimap2"
 
-for file in ../output/fastp_output*.fq; do
+
+echo "Start assembly using minimap2 test"
+
+for file in "./*.fq"; do
 
   # Extract the filename without extension
-  base_name=$(basename "$file" _trimmed.fastq)
+  base_name=$(basename "$file" .fq)
 
-    
-  ./scripts/minimap2/minimap2 -a "$human_reference"\
-                                 "$file" >\ 
-                                 "${output_dir_minimap2}/${base_name}_alignment.sam"
+  if [[ $file =~ \.fq$ ]]; then
+    ./scripts/minimap2/minimap2 -a "$human_reference"\
+                                   "$file" > \
+                                   "${output_dir_minimap2}/${base_name}.sam"
 
-  echo "The file $file has been processed."
+    echo "The file $file has been processed."
+  fi
+
+  
 done
 
 

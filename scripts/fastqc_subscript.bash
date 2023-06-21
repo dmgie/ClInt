@@ -9,7 +9,7 @@ mkdir -p "$output_dir_fastqc"
 ## FastQC
 echo "Running FastQC"
 
-for file in "$input_dir"*.fastq; do
+for file in "${input_dir}/"*.fastq *fq; do
 
    # Perform quality checking with FastQC
     fastqc "$file" -o "$output_dir_fastqc"

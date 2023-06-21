@@ -704,4 +704,5 @@
 @SQ	SN:NT_187687.1	LN:170537
 @SQ	SN:NT_113949.2	LN:177381
 @SQ	SN:NC_012920.1	LN:16569
-@PG	ID:minimap2	PN:minimap2	VN:2.26-r1175	CL:minimap2 -a ../resources/reference/GRCh38_latest_genomic.fna.gz ../output/fastp_output*.fq
+@PG	ID:minimap2	PN:minimap2	VN:2.26-r1175	CL:minimap2 -a ../resources/reference/ref.mmi ../output/fastp_output/1_control_rbcLa_2019_minq7_trimmed.fq
+4b504dd8-0ac5-4f38-be6c-a61f258be4e9	4	*	0	0	*	*	0	0	CGTATACTTCGTTCGGTTATCGGAGGTGGGTGTTTAGCGGTTCGCCTACCCGTGACAAAGAAGTTGTCGGTGTCTTTGTGACTTTTGCCTGTCGCTCTATCTTCGTAAAATCAAGTCCACCGCGACTTGCCTGTCGCTTTAGTCTCTGTTTGTGGTGACATGCAATATCATACCAACGAAACATGAACACCGACAACTTTCTTGTC	)&'$&&&&&44@+($($%$)+%($%'$',-1*$%%%#$#%%$./0072:<>;@6*111%.7189D3/<.6C9=?FEE:@A>34590,--7;<@9B?@;?=>E1A>>?@750300,//6*56/@:A@FB,112-'4$&*+-.38:$/9:>=>8646;;:0<88>02<72/$$(/1100''/+)#$$#-560166:23:=?D<EB6,)	rl:i:0
