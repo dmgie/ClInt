@@ -24,14 +24,39 @@ display_menu() {
     exec < /dev/tty
 
     local selected_options=()
+    local current_selection=""
     local choice
 
+    # NOTE: We can replace the "Selected: " part of the prompt with the actual name (using `options[choice-1]`)
+    # but it might fill up the horizontal space a lot if the names are long
+    # Though it might be a bit more advnatageous so you don't need to keep looking at the list
+    # of programs the entire time
+    # NOTE: Maybe remove the deselection if its repeated? Don't know
+    # FIXME: For some reason we can for one of them, enter it twice. Fix this somehow
+    # FIXME: Comma is leftover after deselecting, fix this somehow.
     while true; do
-        read -rp $'[1mEnter your choice [1-'$num_options'] (Enter to finish)[0m: ' choice
+        read -rp $'[1mEnter your choice [1-'$num_options'][Selected: '"$current_selection"']: [0m' choice
         if [[ -z $choice ]]; then
             break
+        # if choice is already selected, deselect
+        elif [[ $choice =~ ^[1-$num_options]$ ]] && [[ $current_selection =~ $choice ]]; then
+            selected_options=("${selected_options[@]/${options[choice-1]}/}")
+            current_selection=${current_selection//$choice/}
+            # if selected_options=(); then
+            #     current_selection=""
+            # fi
+            echo "    deselected: ${options[choice-1]}" >&2
         elif [[ $choice =~ ^[1-$num_options]$ ]]; then
             selected_options+=("${options[choice-1]}")
+
+            # If its the first, don't add a comma
+            if [[ -z $current_selection ]]; then
+                current_selection="$choice"
+            else
+                current_selection="${current_selection},$choice"
+            fi
+            echo "    selected: ${options[choice-1]}" >&2
+
         # if comma separated list is entered
         elif [[ $choice =~ ^[1-$num_options](,[1-$num_options])*$ ]]; then
             IFS=',' read -ra choices <<< "$choice"
@@ -112,6 +137,7 @@ _print_selected(){
     local -n categories_order=$2
     local -n programs=$3
 
+    echo
     echo -e "\e[4m\e[1mSelected Programs: \e[0m\e[0m"
     for category in "${categories_order[@]}"; do
         echo -e "\e[1m$category: \e[0m"
@@ -137,6 +163,8 @@ _print_selected(){
 ## Switch the names in programs to 1 if they are selected
 category_chooser() {
     # TODO: Maybe make sure at least one option is selected?
+    # NOTE: For the above tood: maybe not, since sometimes we just want to
+    # run a single program again
     local -n categories=$1
     local -n categories_order=$2
     local -n programs=$3
@@ -153,6 +181,7 @@ category_chooser() {
         done
     done
     # Ask if the choices were correct
+    echo "---------------------------"
     echo -e "\e[1mAre these choices correct? \e[0m"
     _print_selected $1 $2 $3
     select yn in "Yes" "No"; do
