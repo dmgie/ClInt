@@ -18,7 +18,7 @@ display_menu() {
 
     echo "$prompt" >&2
     for ((i=0; i<num_options; i++)); do
-        echo "$((i+1)). ${options[i]}" >&2
+        echo "    $((i+1)). ${options[i]}" >&2
     done
 
     exec < /dev/tty
@@ -108,7 +108,7 @@ _print_selected(){
 
     echo -e "\e[4m\e[1mSelected Programs: \e[0m\e[0m"
     for category in "${categories_order[@]}"; do
-        echo -e "   \e[1m$category: \e[0m"
+        echo -e "\e[1m$category: \e[0m"
         ## For each program in the category, check if it is selected, and if so, print it
         category_programs=${categories[$category]}
 
@@ -137,8 +137,9 @@ category_chooser() {
     local -n order_programs=$4
 
     for category in "${categories_order[@]}"; do
+        echo #newline
         echo -e "\e[1m$category: \e[0m"
-        selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
+        selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}")
         for program in "${order_programs[@]}"; do
             if [[ " ${selected_options[@]} " =~ " $program " ]]; then
                 programs[$program]=1
