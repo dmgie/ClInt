@@ -9,14 +9,14 @@ mkdir -p "$output_dir_minimap2"
 
 echo "Start assembly using minimap2"
 
-for file in "${input_dir}/"*.fq *.fastq; do
+for file in "${input_dir}/"*.fastq *fq; do
 
   # Extract the filename without extension
   base_name=$(basename "$file" .fq)
 
-  ../programs/minimap2/minimap2 -a "$human_reference"\
-                                   "$file" > \
-                                   "${output_dir_minimap2}/${base_name}.sam"
+  ./programs/minimap2/minimap2 -a "$human_reference"\
+                                  "$file" > \
+                                  "${output_dir_minimap2}/${base_name}.sam"
 
     echo "The file $file has been processed."
 done
