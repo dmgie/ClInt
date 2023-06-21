@@ -93,3 +93,65 @@ get_available_ram() {
     echo $ram_gb
 
 }
+
+_reset_programs(){
+    local -n programs=$1
+    local -n order_programs=$2
+    for program in "${order_programs[@]}"; do
+        programs[$program]=0
+    done
+}
+_print_selected(){
+    local -n categories=$1
+    local -n categories_order=$2
+    local -n programs=$3
+
+    echo -e "\e[4m\e[1mSelected Programs: \e[0m\e[0m"
+    for category in "${categories_order[@]}"; do
+        echo -e "   \e[1m$category: \e[0m"
+        ## For each program in the category, check if it is selected, and if so, print it
+        category_programs=${categories[$category]}
+
+        # Ignore existing spaces, and split on commas, used for the loop below
+        IFS=',' read -r -a category_programs <<< "$category_programs"
+
+        # program_full being the full description, e.g fastp (All-in-one)
+        for program_full in "${category_programs[@]}"; do
+            # Take only the first word of the program, as that is the actual program name e.g fastp
+            program=$(echo $program_full | cut -d' ' -f1)
+            if [ "${programs[$program]}" -eq 1 ]; then
+                echo -e "       $program_full"
+            fi
+        done
+    done
+}
+
+## Display a menu for each category, and allow the user to select which programs they want to run
+## If multiple are selected, they are returned as space delimited
+## Switch the names in programs to 1 if they are selected
+category_chooser() {
+    # TODO: Maybe make sure at least one option is selected?
+    local -n categories=$1
+    local -n categories_order=$2
+    local -n programs=$3
+    local -n order_programs=$4
+
+    for category in "${categories_order[@]}"; do
+        echo -e "\e[1m$category: \e[0m"
+        selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
+        for program in "${order_programs[@]}"; do
+            if [[ " ${selected_options[@]} " =~ " $program " ]]; then
+                programs[$program]=1
+            fi
+        done
+    done
+    # Ask if the choices were correct
+    echo -e "\e[1mAre these choices correct? \e[0m"
+    _print_selected $1 $2 $3
+    select yn in "Yes" "No"; do
+        case $yn in
+            Yes ) break;;
+            No ) _reset_programs $3 $4; category_chooser $1 $2 $3 $4; break;;
+        esac
+    done
+}

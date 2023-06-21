@@ -100,91 +100,44 @@ RNA_READS_DIR=reads
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
 ## which would not be ideal when presenting the final option selection
-
-## TODO: Find a way to add descriptions i.e fastp (All-in-one), but not have it be part of the actual program name and mess 
-## up the below code
-declare -A categories;                                      declare -a categories_order;
-categories["Quality Control"]="FastQC,\
-MultiQC,\
-fastp (All-in-one),\
-TrimGalore";                                                categories_order+=("Quality Control")
-categories["Assembly"]="SPAdes,Trinity,STRING,minimap2";    categories_order+=("Assembly")
-categories["Mapping"]="BWA,HISAT,STAR";                     categories_order+=("Mapping")
-categories["Variant Calling"]="FreeBayes,BCFTools";         categories_order+=("Variant Calling")
-categories["Annotation"]="SnpEff";                          categories_order+=("Annotation")
-
-
-declare -A programs;                            declare -a order_programs;
-programs["FastQC"]=0;         order_programs+=("FastQC")
-programs["MultiQC"]=0;                          order_programs+=("MultiQC")
-programs["fastp"]=0;               order_programs+=("fastp")
-programs["TrimGalore"]=0;         order_programs+=("TrimGalore")
-programs["SPAdes"]=0;                           order_programs+=("SPAdes")
-programs["Trinity"]=0;                          order_programs+=("Trinity")
-programs["STRING"]=0;                           order_programs+=("STRING")
-programs["minimap2"]=0;                         order_programs+=("minimap2")
-programs["HISAT"]=0;                            order_programs+=("HISAT")
-programs["STAR"]=0;                             order_programs+=("STAR")
-programs["BWA"]=0;                              order_programs+=("BWA")
-programs["FreeBayes"]=0;                        order_programs+=("FreeBayes")
-programs["BCFTools"]=0;                         order_programs+=("BCFTools")
-programs["SnpEff"]=0;                           order_programs+=("SnpEff")
+RNA_Questionnaire() {
+    # RNA-based questionnaire
+    declare -A rna_categories;                                      declare -a rna_categories_order;
+    rna_categories["Quality Control"]="FastQC,\
+    MultiQC,\
+    fastp (All-in-one),\
+    TrimGalore";                                         rna_categories_order+=("Quality Control")
+    rna_categories["Assembly"]="SPAdes,Trinity,STRING,minimap2"; rna_categories_order+=("Assembly")
+    rna_categories["Mapping"]="BWA,HISAT,STAR";                  rna_categories_order+=("Mapping")
+    rna_categories["Variant Calling"]="FreeBayes,BCFTools";      rna_categories_order+=("Variant Calling")
+    rna_categories["Annotation"]="SnpEff";                       rna_categories_order+=("Annotation")
 
 
+    declare -A rna_programs;         declare -a rna_programs_order;
+    rna_programs["FastQC"]=0;                   rna_programs_order+=("FastQC")
+    rna_programs["MultiQC"]=0;                  rna_programs_order+=("MultiQC")
+    rna_programs["fastp"]=0;                    rna_programs_order+=("fastp")
+    rna_programs["TrimGalore"]=0;               rna_programs_order+=("TrimGalore")
+    rna_programs["SPAdes"]=0;                   rna_programs_order+=("SPAdes")
+    rna_programs["Trinity"]=0;                  rna_programs_order+=("Trinity")
+    rna_programs["STRING"]=0;                   rna_programs_order+=("STRING")
+    rna_programs["minimap2"]=0;                 rna_programs_order+=("minimap2")
+    rna_programs["HISAT"]=0;                    rna_programs_order+=("HISAT")
+    rna_programs["STAR"]=0;                     rna_programs_order+=("STAR")
+    rna_programs["BWA"]=0;                      rna_programs_order+=("BWA")
+    rna_programs["FreeBayes"]=0;                rna_programs_order+=("FreeBayes")
+    rna_programs["BCFTools"]=0;                 rna_programs_order+=("BCFTools")
+    rna_programs["SnpEff"]=0;                   rna_programs_order+=("SnpEff")
 
+    # TODO: For each program, add its function/script to run as an arra i.e
+    # declare -A rna_program_script;                            declare -a rna_script_order;
+    # rna_program_script["FastQC"]="./scripts/fastqc.bash";  rna_script_order+=("FastQC")
 
-_reset_programs(){
-  for program in "${order_programs[@]}"; do
-    programs[$program]=0
-  done
-}
-_print_selected(){
-    # TODO: MAke this print under each category the programs used. Use the value from category to get the programs and see if
-    # they are 1 or 0
-    echo -e "\e[4m\e[1mSelected Programs: \e[0m\e[0m"
-    for category in "${categories_order[@]}"; do
-        echo -e "   \e[1m$category: \e[0m"
-        ## For each program in the category, check if it is selected, and if so, print it
-        category_programs=${categories[$category]}
-        
-        # Ignore existing spaces, and split on commas, used for the loop below
-        IFS=',' read -r -a category_programs <<< "$category_programs"
-        
-        # program_full being the full description, e.g fastp (All-in-one)
-        for program_full in "${category_programs[@]}"; do
-            # Take only the first word of the program, as that is the actual program name e.g fastp
-            program=$(echo $program_full | cut -d' ' -f1)
-            if [ "${programs[$program]}" -eq 1 ]; then
-                echo -e "       $program_full"
-            fi
-        done
-    done
+    # From ./utils.bash
+    category_chooser rna_categories rna_categories_order rna_programs rna_programs_order
 }
 
-## Display a menu for each category, and allow the user to select which programs they want to run
-## If multiple are selected, they are returned as space delimited
-## Switch the names in programs to 1 if they are selected
-category_chooser() {
-    # TODO: Maybe make sure at least one option is selected?
-    for category in "${categories_order[@]}"; do
-        echo -e "\e[1m$category: \e[0m"
-        selected_options=$(display_menu "Select the programs you want to run:" "${categories[$category]}")
-        for program in "${order_programs[@]}"; do
-            if [[ " ${selected_options[@]} " =~ " $program " ]]; then
-                programs[$program]=1
-            fi
-        done
-    done
-    # Ask if the choices were correct
-    echo -e "\e[1mAre these choices correct? \e[0m"
-    _print_selected
-    select yn in "Yes" "No"; do
-        case $yn in
-            Yes ) break;;
-            No ) _reset_programs; category_chooser; break;;
-        esac
-    done
-}
+
 
 
 
@@ -192,9 +145,7 @@ category_chooser() {
 NUM_CORES=$(get_core_count)
 MAX_RAM=$(get_available_ram)
 
-
-
-category_chooser
+RNA_Questionnaire
 
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
