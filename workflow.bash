@@ -100,10 +100,12 @@ RNA_READS_DIR=reads
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
 ## which would not be ideal when presenting the final option selection
-declare -A "rna_programs";         
+declare -A rna_programs;         
 declare -a rna_programs_order;
 declare -A rna_categories;                                      
 declare -a rna_categories_order;
+
+declare -A rna_programs_arguments;
 
 RNA_Questionnaire() {
     # RNA-based questionnaire
@@ -118,22 +120,20 @@ TrimGalore";                                                     rna_categories_
     rna_categories["Annotation"]="SnpEff";                       rna_categories_order+=("Annotation")
 
 
-    rna_programs["FastQC"]=0;                   rna_programs_order+=("FastQC")
+    rna_programs["FastQC"]=0;                   rna_programs_order+=("FastQC")             rna_program_arguments["FastQC"]="$INPUT_GENOME_PATH $OUTPUT_DIR"
     rna_programs["MultiQC"]=0;                  rna_programs_order+=("MultiQC")
-    rna_programs["fastp"]=0;                    rna_programs_order+=("fastp")
+    rna_programs["fastp"]=0;                    rna_programs_order+=("fastp")              rna_program_arguments["fastp"]="$INPUT_GENOME_PATH $OUTPUT_DIR" 
     rna_programs["TrimGalore"]=0;               rna_programs_order+=("TrimGalore")
     rna_programs["SPAdes"]=0;                   rna_programs_order+=("SPAdes")
     rna_programs["Trinity"]=0;                  rna_programs_order+=("Trinity")
     rna_programs["STRING"]=0;                   rna_programs_order+=("STRING")
-    rna_programs["minimap2"]=0;                 rna_programs_order+=("minimap2")
+    rna_programs["minimap2"]=0;                 rna_programs_order+=("minimap2")           rna_program_arguments["minimap2"]="$HUMAN_REFERENCE_PATH $INPUT_GENOME_PATH $OUTPUT_DIR"
     rna_programs["HISAT"]=0;                    rna_programs_order+=("HISAT")
     rna_programs["STAR"]=0;                     rna_programs_order+=("STAR")
     rna_programs["BWA"]=0;                      rna_programs_order+=("BWA")
     rna_programs["FreeBayes"]=0;                rna_programs_order+=("FreeBayes")
     rna_programs["BCFTools"]=0;                 rna_programs_order+=("BCFTools")
     rna_programs["SnpEff"]=0;                   rna_programs_order+=("SnpEff")
-
-    echo "State before choosing: ${rna_programs["FastQC"]}, $rna_programs[]"
 
     # TODO: For each program, add its function/script to run as an arra i.e
     # declare -A rna_program_script;                            declare -a rna_script_order;
@@ -156,12 +156,25 @@ echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 PROCESSED_READS_DIR="$INPUT_GENOME_PATH"
 
+## associative array testing for program run
+
+for program in "${!rna_programs[@]}" 
+do
+  if [ "${rna_programs[$program]}" -eq 1 ]; then
+    echo "Running $program, arguments are ${rna_program_arguments[$program]}"
+    ./scripts/${program}_subscript.bash $rna_program_arguments[$program]
+  fi
+done
+
+: '
 ## FastQC
+
 if [ "${rna_programs["FastQC"]}" -eq 1 ]; then
   echo "FASTQC works"
    ./scripts/fastqc_subscript.bash "$INPUT_GENOME_PATH"\
                                    "$OUTPUT_DIR"
 fi
+
 
 ## fastp
 if [ "${rna_programs[fastp]}" -eq 1 ]; then
@@ -171,28 +184,30 @@ if [ "${rna_programs[fastp]}" -eq 1 ]; then
     PROCESSED_READS_DIR="${OUTPUT_DIR}/fastp_output"
 fi
 
+  '
+
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue
 ## TODO: Is this needed? Things like trimgalore and fastp do the trimming for you, so you don't need to pause
-echo -e "\e[1m Read analysis complete, check quality and \e[0m"
-read -p "Press enter to continue..."
+##echo -e "\e[1m Read analysis complete, check quality and \e[0m"
+##read -p "Press enter to continue..."
 
-
+  
 
 ## Trimming reads
 
 
 
 #### Assembly ####
-if [ "${rna_programs[minimap2]}" -eq 1 ]; then
+##if [ "${rna_programs[minimap2]}" -eq 1 ]; then
   #if [ "${programs[fastp]}" -eq 1 ]; then
-    ./scripts/minimap2_subscript.bash "$HUMAN_REFERENCE_PATH"\
-                                      "$PROCESSED_READS_DIR"\
-		                                  "$OUTPUT_DIR"
+    #./scripts/minimap2_subscript.bash "$HUMAN_REFERENCE_PATH"\
+    #                                  "$PROCESSED_READS_DIR"\
+		#                                  "$OUTPUT_DIR"
   #else
     #echo "When using an assembler, you should use fastp first to ensure
     #      only high quality reads being used."
   #fi
-fi
+#fi
 
 
 
