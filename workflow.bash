@@ -100,20 +100,24 @@ RNA_READS_DIR=reads
 ## Assosciative array to store the various options for the user to select from
 ## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
 ## which would not be ideal when presenting the final option selection
+declare -A "rna_programs";         
+declare -a rna_programs_order;
+declare -A rna_categories;                                      
+declare -a rna_categories_order;
+
 RNA_Questionnaire() {
     # RNA-based questionnaire
-    declare -A rna_categories;                                      declare -a rna_categories_order;
+    
     rna_categories["Quality Control"]="FastQC,\
 MultiQC,\
 fastp (All-in-one),\
-TrimGalore";                                         rna_categories_order+=("Quality Control")
+TrimGalore";                                                     rna_categories_order+=("Quality Control")
     rna_categories["Assembly"]="SPAdes,Trinity,STRING,minimap2"; rna_categories_order+=("Assembly")
     rna_categories["Mapping"]="BWA,HISAT,STAR";                  rna_categories_order+=("Mapping")
     rna_categories["Variant Calling"]="FreeBayes,BCFTools";      rna_categories_order+=("Variant Calling")
     rna_categories["Annotation"]="SnpEff";                       rna_categories_order+=("Annotation")
 
 
-    declare -A rna_programs;         declare -a rna_programs_order;
     rna_programs["FastQC"]=0;                   rna_programs_order+=("FastQC")
     rna_programs["MultiQC"]=0;                  rna_programs_order+=("MultiQC")
     rna_programs["fastp"]=0;                    rna_programs_order+=("fastp")
@@ -129,6 +133,8 @@ TrimGalore";                                         rna_categories_order+=("Qua
     rna_programs["BCFTools"]=0;                 rna_programs_order+=("BCFTools")
     rna_programs["SnpEff"]=0;                   rna_programs_order+=("SnpEff")
 
+    echo "State before choosing: ${rna_programs["FastQC"]}, $rna_programs[]"
+
     # TODO: For each program, add its function/script to run as an arra i.e
     # declare -A rna_program_script;                            declare -a rna_script_order;
     # rna_program_script["FastQC"]="./scripts/fastqc.bash";  rna_script_order+=("FastQC")
@@ -138,15 +144,11 @@ TrimGalore";                                         rna_categories_order+=("Qua
 }
 
 
-
-
-
 ## Ask for CORE and RAM 
 NUM_CORES=$(get_core_count)
 MAX_RAM=$(get_available_ram)
 
 RNA_Questionnaire
-
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
@@ -155,13 +157,14 @@ echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 PROCESSED_READS_DIR="$INPUT_GENOME_PATH"
 
 ## FastQC
-if [ "${programs[FastQC]}" -eq 1 ]; then
+if [ "${rna_programs["FastQC"]}" -eq 1 ]; then
+  echo "FASTQC works"
    ./scripts/fastqc_subscript.bash "$INPUT_GENOME_PATH"\
                                    "$OUTPUT_DIR"
 fi
 
 ## fastp
-if [ "${programs[fastp]}" -eq 1 ]; then
+if [ "${rna_programs[fastp]}" -eq 1 ]; then
    ./scripts/fastp_subscript.bash "$INPUT_GENOME_PATH"\
                                   "$OUTPUT_DIR"
 
@@ -180,7 +183,7 @@ read -p "Press enter to continue..."
 
 
 #### Assembly ####
-if [ "${programs[minimap2]}" -eq 1 ]; then
+if [ "${rna_programs[minimap2]}" -eq 1 ]; then
   #if [ "${programs[fastp]}" -eq 1 ]; then
     ./scripts/minimap2_subscript.bash "$HUMAN_REFERENCE_PATH"\
                                       "$PROCESSED_READS_DIR"\
