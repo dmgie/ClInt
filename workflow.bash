@@ -105,7 +105,7 @@ declare -a rna_programs_order;
 declare -A rna_categories;                                      
 declare -a rna_categories_order;
 
-declare -A rna_programs_arguments;
+declare -A rna_program_arguments;
 
 RNA_Questionnaire() {
     # RNA-based questionnaire
@@ -135,6 +135,7 @@ TrimGalore";                                                     rna_categories_
     rna_programs["BCFTools"]=0;                 rna_programs_order+=("BCFTools")
     rna_programs["SnpEff"]=0;                   rna_programs_order+=("SnpEff")
 
+
     # TODO: For each program, add its function/script to run as an arra i.e
     # declare -A rna_program_script;                            declare -a rna_script_order;
     # rna_program_script["FastQC"]="./scripts/fastqc.bash";  rna_script_order+=("FastQC")
@@ -162,7 +163,7 @@ for program in "${!rna_programs[@]}"
 do
   if [ "${rna_programs[$program]}" -eq 1 ]; then
     echo "Running $program, arguments are ${rna_program_arguments[$program]}"
-    ./scripts/${program}_subscript.bash $rna_program_arguments[$program]
+    ./scripts/${program}_subscript.bash ${rna_program_arguments[$program]}
   fi
 done
 
