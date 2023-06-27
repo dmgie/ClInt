@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<programs>
+    <program type="FastQC">
+        <arg>$INPUT_GENOME_PATH</arg>
+        <arg>$OUTPUT_DIR</arg>
+    </program>
+    <program type="fastp">
+        <arg>$INPUT_GENOME_PATH</arg>
+        <arg>$OUTPUT_DIR</arg>
+    </program>
+    <program type="minimap2">
+        <arg>$HUMAN_REFERENCE_PATH</arg>
+        <arg>$INPUT_GENOME_PATH</arg>
+        <arg>$OUTPUT_DIR</arg>
+    </program>
+</programs>

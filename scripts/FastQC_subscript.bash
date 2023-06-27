@@ -3,8 +3,6 @@
 input_dir="$1"
 output_dir="$2"
 
-echo "IN: $input_dir OUT: $output_dir"
-
 output_dir_fastqc="${output_dir}/fastqc_output/"
 mkdir -p "$output_dir_fastqc"
 

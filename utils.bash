@@ -6,7 +6,7 @@ display_menu() {
     local options_string=$2
 
     # Set the Internal Field Separator (IFS) to comma
-    IFS=',' read -ra options <<< "$options_string"
+    IFS=',' read -ra options <<<"$options_string"
 
     # trim newlines
     prompt=${prompt//$'\n'/}
@@ -17,11 +17,11 @@ display_menu() {
     local num_options=${#options[@]}
 
     echo "$prompt" >&2
-    for ((i=0; i<num_options; i++)); do
-        echo "    $((i+1)). ${options[i]}" >&2
+    for ((i = 0; i < num_options; i++)); do
+        echo "    $((i + 1)). ${options[i]}" >&2
     done
 
-    exec < /dev/tty
+    exec </dev/tty
 
     local selected_options=()
     local current_selection=""
@@ -40,14 +40,14 @@ display_menu() {
             break
         # if choice is already selected, deselect
         elif [[ $choice =~ ^[1-$num_options]$ ]] && [[ $current_selection =~ $choice ]]; then
-            selected_options=("${selected_options[@]/${options[choice-1]}/}")
+            selected_options=("${selected_options[@]/${options[choice - 1]}/}")
             current_selection=${current_selection//$choice/}
             # if selected_options=(); then
             #     current_selection=""
             # fi
-            echo "    deselected: ${options[choice-1]}" >&2
+            echo "    deselected: ${options[choice - 1]}" >&2
         elif [[ $choice =~ ^[1-$num_options]$ ]]; then
-            selected_options+=("${options[choice-1]}")
+            selected_options+=("${options[choice - 1]}")
 
             # If its the first, don't add a comma
             if [[ -z $current_selection ]]; then
@@ -55,13 +55,13 @@ display_menu() {
             else
                 current_selection="${current_selection},$choice"
             fi
-            echo "    selected: ${options[choice-1]}" >&2
+            echo "    selected: ${options[choice - 1]}" >&2
 
         # if comma separated list is entered
         elif [[ $choice =~ ^[1-$num_options](,[1-$num_options])*$ ]]; then
-            IFS=',' read -ra choices <<< "$choice"
+            IFS=',' read -ra choices <<<"$choice"
             for choice in "${choices[@]}"; do
-                selected_options+=("${options[choice-1]}")
+                selected_options+=("${options[choice - 1]}")
             done
         else
             echo "Invalid choice. Please try again." >&2
@@ -71,7 +71,6 @@ display_menu() {
     echo "${selected_options[@]}"
 }
 
-
 # Used as thread/core variable in the workflow
 get_core_count() {
     local prompt="Enter the number of cores to use"
@@ -79,7 +78,7 @@ get_core_count() {
     local num_cores=$(grep -c ^processor /proc/cpuinfo)
 
     # 1/8th of the cores would seem like a good amount?
-    local default=$((num_cores/8))
+    local default=$((num_cores / 8))
 
     local core_count
 
@@ -102,10 +101,10 @@ get_available_ram() {
     local prompt="Enter the amount of RAM to use (in GB)"
     # Check how much RAM the system has
     local total_ram=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-    local total_ram_gb=$((total_ram/1024/1024))
+    local total_ram_gb=$((total_ram / 1024 / 1024))
 
     # 1/8th of the RAM would seem like a good amount?
-    local default=$((total_ram_gb/8))
+    local default=$((total_ram_gb / 8))
 
     local ram_gb
 
@@ -125,14 +124,14 @@ get_available_ram() {
 
 }
 
-_reset_programs(){
+_reset_programs() {
     local -n programs=$1
     local -n order_programs=$2
     for program in "${order_programs[@]}"; do
         programs[$program]=0
     done
 }
-_print_selected(){
+_print_selected() {
     local -n categories=$1
     local -n categories_order=$2
     local -n programs=$3
@@ -145,7 +144,7 @@ _print_selected(){
         category_programs=${categories[$category]}
 
         # Ignore existing spaces, and split on commas, used for the loop below
-        IFS=',' read -r -a category_programs <<< "$category_programs"
+        IFS=',' read -r -a category_programs <<<"$category_programs"
 
         # program_full being the full description, e.g fastp (All-in-one)
         for program_full in "${category_programs[@]}"; do
@@ -186,8 +185,44 @@ category_chooser() {
     _print_selected $1 $2 $3
     select yn in "Yes" "No"; do
         case $yn in
-            Yes ) break;;
-            No ) _reset_programs $3 $4; category_chooser $1 $2 $3 $4; break;;
+        Yes) break ;;
+        No)
+            _reset_programs $3 $4
+            category_chooser $1 $2 $3 $4
+            break
+            ;;
         esac
     done
+}
+
+
+## Get program arguments from xml config file
+get_args() {
+    local -n prog=$1
+
+    xmlstarlet sel -t \
+        --var prog_name="'$prog'" \
+        -v '//programs/program[@type = $prog_name]' \
+        -nl temp_arguments.xml
+}
+
+## Check whether all necessary input arguments are set, return 1 if argument is missing
+check_args_complete() {
+    local -n argument_list=$1
+
+    echo "works, $argument_list"
+    complete=0
+
+    # Check if variables are empty
+    for argument in "${argument_list[@]}"; do
+        if [ -z "$argument" ]; then
+            echo "$argument is empty, please check input variables"
+            $complete=1
+
+        else
+            echo "$argument is set"
+        fi
+    done
+
+    return $complete
 }
