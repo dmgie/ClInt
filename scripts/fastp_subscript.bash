@@ -7,7 +7,6 @@ output_dir_fastp="${output_dir}/fastp_output/"
 mkdir -p "$output_dir_fastp"
 
 ## fastp
-echo "Running fastp"
 
 for file in "${input_dir}/"*.fastq *.fq; do
 

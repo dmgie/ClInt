@@ -7,7 +7,6 @@ output_dir_fastqc="${output_dir}/fastqc_output/"
 mkdir -p "$output_dir_fastqc"
 
 ## FastQC
-echo "Running FastQC"
 
 for file in "${input_dir}/"*.fastq *fq; do
 

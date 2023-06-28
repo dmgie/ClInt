@@ -13,4 +13,10 @@
         <arg>$INPUT_GENOME_PATH</arg>
         <arg>$OUTPUT_DIR</arg>
     </program>
+    <program type="Trinity">
+        <arg>DeNovo</arg>
+        <arg>$INPUT_GENOME_PATH</arg>
+        <arg>$HUMAN_REFERENCE_PATH</arg> 
+        <arg>$OUTPUT_DIR</arg>
+    </program>
 </programs>

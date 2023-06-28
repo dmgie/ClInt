@@ -195,34 +195,37 @@ category_chooser() {
     done
 }
 
-
-## Get program arguments from xml config file
-get_args() {
+## Get program arguments specified in ./arguments.xml config file
+## Read arguments using 'xmlstarlet', choose arguments depending on program name
+## The xml file contains files or directories as arguments
+## Store strings and return
+get_arguments() {
     local -n prog=$1
+    local output=()
 
-    xmlstarlet sel -t \
+    while IFS= read -r line; do
+        output+=("$line")
+    done < <(xmlstarlet sel -t \
         --var prog_name="'$prog'" \
         -v '//programs/program[@type = $prog_name]' \
-        -nl temp_arguments.xml
+        -nl temp_arguments.xml)
+
+    echo "${output[@]}"
 }
 
-## Check whether all necessary input arguments are set, return 1 if argument is missing
-check_args_complete() {
-    local -n argument_list=$1
+## Check whether all necessary input arguments are set
+## return 1 if all required arguments are given
+## return 0 if argument is missing
+arguments_complete() {
+    argument_list=("$@")
 
-    echo "works, $argument_list"
-    complete=0
-
-    # Check if variables are empty
     for argument in "${argument_list[@]}"; do
-        if [ -z "$argument" ]; then
-            echo "$argument is empty, please check input variables"
-            $complete=1
-
-        else
-            echo "$argument is set"
+        EMPTY="_EMPTY"
+        if [[ "$argument" == *"$EMPTY" ]]; then
+            echo "$argument, please check input arguments"
+            return 1 
         fi
     done
 
-    return $complete
+    return 0
 }

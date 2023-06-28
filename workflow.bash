@@ -15,24 +15,31 @@ source ./utils.bash
 ## Argument Parsing: Long and short form
 ## TODO: Do we even want this? Maybe prompt for user input?
 ## It might get unwieldy if we have a lot of arguments for every program
+
+export INPUT_GENOME_PATH="INPUT_GENOME_PATH_EMPTY"
+export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
+export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
+export OUTPUT_DIR="OUTPUT_DIR_EMPTY"
+
+
 _setArgs() {
   while [ "${1:-}" != "" ]; do
     case "$1" in
     "-i" | "--input-genome")
       shift
-      export INPUT_GENOME_PATH=$1
+      INPUT_GENOME_PATH=$1
       ;;
     "-r" | "--reference")
       shift
-      export HUMAN_REFERENCE_PATH=$1
+      HUMAN_REFERENCE_PATH=$1
       ;;
     "-g" | "--reference-gff")
       shift
-      export HUMAN_REFERENCE_GFF_PATH=$1
+      HUMAN_REFERENCE_GFF_PATH=$1
       ;;
     "-o" | "--output-dir")
       shift
-      export OUTPUT_DIR=$1
+      OUTPUT_DIR=$1
       # If output is a file, then we should exit with an error
       if [ -f "$OUTPUT_DIR" ]; then
         echo "Output directory is a file. Please specify a directory."
@@ -152,25 +159,29 @@ echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 #### Quality Control ####
 
-# Exchange local variable placeholders for input variables
+# Exchange environment variable placeholders for input variables
 # Create temporary arguments file
 envsubst < arguments.xml \
          > temp_arguments.xml
 
+# Iterate through program list
 for program in "${!rna_programs[@]}"; do
 
   # Execute when program entry is set to 1
   if [ "${rna_programs[$program]}" -eq 1 ]; then
 
-    # Get arguments from xml config file, run program
-    arguments=$(get_args program)
+    # Get arguments from xml config file, turn into array
+    arguments=$(get_arguments "program")
+    arguments_array=($arguments)
 
-    #if [ $(check_args_complete argumets) -eq 0 ]; then
-     # echo "Everything ok"
-    #fi
-
-    echo "Running $program, arguments are $arguments"
-    ./scripts/${program}_subscript.bash $arguments
+    # Only run program when arguments complete returns 0
+    # Execute program subscript
+    echo "Running $program"
+    if arguments_complete "${arguments_array[@]}"; then 
+      ./scripts/${program}_subscript.bash $arguments
+    else
+      echo "Arguments missing, can not execute $program"
+    fi
   fi
 done
 

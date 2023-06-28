@@ -7,7 +7,7 @@ output_dir="$3"
 output_dir_minimap2="${output_dir}/minimap2_output"
 mkdir -p "$output_dir_minimap2"
 
-echo "Start assembly using minimap2"
+# Run minimap2
 
 for file in "${input_dir}/"*.fastq *fq; do
 
