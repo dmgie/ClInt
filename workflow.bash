@@ -6,11 +6,8 @@
 ## Import some shared functions
 source ./utils.bash
 
-## Set up various (environment) variables that we will use throughout the workflow, these are default?
-## NOTE: Can be skipped, we do prompt-based input instead (below)
-# NUM_CORES=8
-# NUM_THREADS=8
-# MAX_RAM_GB=32
+## XML config file
+export XML_FILE="./arguments.xml"
 
 ## Argument Parsing: Long and short form
 ## TODO: Do we even want this? Maybe prompt for user input?
@@ -20,6 +17,9 @@ export INPUT_GENOME_PATH="INPUT_GENOME_PATH_EMPTY"
 export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
 export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
 export OUTPUT_DIR="OUTPUT_DIR_EMPTY"
+
+export NUM_CORES="NUM_CORES_EMPTY"
+export MAX_RAM="MAX_RAM_EMPTY"
 
 
 _setArgs() {
@@ -111,19 +111,15 @@ declare -a rna_programs_order
 declare -A rna_categories
 declare -a rna_categories_order
 
-declare -A rna_program_arguments
-
 RNA_Questionnaire() {
   # RNA-based questionnaire
 
-  rna_categories["Quality Control"]="FastQC,\
-MultiQC,\
-fastp (All-in-one),\
-TrimGalore"
-  rna_categories_order+=("Quality Control")     rna_categories["Assembly"]="SPAdes,Trinity,STRING,minimap2"
-  rna_categories_order+=("Assembly")            rna_categories["Mapping"]="BWA,HISAT,STAR"
-  rna_categories_order+=("Mapping")             rna_categories["Variant Calling"]="FreeBayes,BCFTools"
-  rna_categories_order+=("Variant Calling")     rna_categories["Annotation"]="SnpEff"
+  eval "$(get_categories "$XML_FILE")"
+
+  rna_categories_order+=("Quality Control")     
+  rna_categories_order+=("Assembly")            
+  rna_categories_order+=("Mapping")             
+  rna_categories_order+=("Variant Calling")     
   rna_categories_order+=("Annotation")
 
   rna_programs["FastQC"]=0                      rna_programs_order+=("FastQC")        
@@ -140,10 +136,6 @@ TrimGalore"
   rna_programs["FreeBayes"]=0                   rna_programs_order+=("FreeBayes")
   rna_programs["BCFTools"]=0                    rna_programs_order+=("BCFTools")
   rna_programs["SnpEff"]=0                      rna_programs_order+=("SnpEff")
-
-  # TODO: For each program, add its function/script to run as an arra i.e
-  # declare -A rna_program_script;                            declare -a rna_script_order;
-  # rna_program_script["FastQC"]="./scripts/fastqc.bash";  rna_script_order+=("FastQC")
 
   # From ./utils.bash
   category_chooser rna_categories rna_categories_order rna_programs rna_programs_order
@@ -176,7 +168,7 @@ for program in "${!rna_programs[@]}"; do
 
     # Only run program when arguments complete returns 0
     # Execute program subscript
-    echo "Running $program"
+    echo "Running $program, $arguments"
     if arguments_complete "${arguments_array[@]}"; then 
       ./scripts/${program}_subscript.bash $arguments
     else

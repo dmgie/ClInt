@@ -175,6 +175,7 @@ category_chooser() {
         selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}")
         for program in "${order_programs[@]}"; do
             if [[ " ${selected_options[@]} " =~ " $program " ]]; then
+                echo "Works for $program"
                 programs[$program]=1
             fi
         done
@@ -207,7 +208,7 @@ get_arguments() {
         output+=("$line")
     done < <(xmlstarlet sel -t \
         --var prog_name="'$prog'" \
-        -v '//programs/program[@type = $prog_name]' \
+        -v '//programs/category[*]/program[@name = $prog_name]/arg' \
         -nl temp_arguments.xml)
 
     echo "${output[@]}"
@@ -228,4 +229,28 @@ arguments_complete() {
     done
 
     return 0
+}
+
+## Read categories and asociated programs from XML file usinf xmlstarlet
+## Store into associated array and return
+get_categories() {
+    local xml_file="$1"
+    declare -A rna_categories
+
+    while IFS= read -r line; do
+        if [[ $line == *"<category"* ]]; then
+            category_type=$(echo "$line" | awk -F '"' '/category/{print $2}')
+        fi
+
+        if [[ $line == *"<program"* ]]; then
+            program_name=$(echo "$line" | awk -F '"' '/program/{print $2}')
+            if [[ -z ${rna_categories["$category_type"]} ]]; then
+                rna_categories["$category_type"]=$program_name
+            else
+                rna_categories["$category_type"]+=",$program_name"
+            fi
+        fi
+    done < <(xmlstarlet sel -t -c "/programs/category" "$xml_file")
+
+    declare -p rna_categories
 }

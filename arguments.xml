@@ -1,22 +1,58 @@
 <?xml version="1.0"?>
 <programs>
-    <program type="FastQC">
-        <arg>$INPUT_GENOME_PATH</arg>
-        <arg>$OUTPUT_DIR</arg>
-    </program>
-    <program type="fastp">
-        <arg>$INPUT_GENOME_PATH</arg>
-        <arg>$OUTPUT_DIR</arg>
-    </program>
-    <program type="minimap2">
-        <arg>$HUMAN_REFERENCE_PATH</arg>
-        <arg>$INPUT_GENOME_PATH</arg>
-        <arg>$OUTPUT_DIR</arg>
-    </program>
-    <program type="Trinity">
-        <arg>DeNovo</arg>
-        <arg>$INPUT_GENOME_PATH</arg>
-        <arg>$HUMAN_REFERENCE_PATH</arg> 
-        <arg>$OUTPUT_DIR</arg>
-    </program>
+    <category type="Quality Control">
+        <program name="FastQC">
+            <description>Quality Control for short reads</description>
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$OUTPUT_DIR</arg>
+        </program>
+        <program name="MultiQC">
+        </program>
+        <program name="fastp">
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$OUTPUT_DIR</arg>
+        </program>
+        <program name="TrimGalore">
+        </program>
+    </category>
+    <category type="Assembly">
+        <program name="minimap2">
+            <arg>$HUMAN_REFERENCE_PATH</arg>
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$OUTPUT_DIR</arg>
+        </program>
+        <program name="Trinity">
+            <arg>DeNovo</arg>
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$HUMAN_REFERENCE_PATH</arg> 
+            <arg>$OUTPUT_DIR</arg>
+            <arg>$NUM_CORES</arg>
+            <arg>${MAX_RAM}G</arg>
+            <arg>$MAX_INTRON</arg>
+        </program>
+        <program name="SPADdes">
+        </program>
+        <program name="STRING">
+        </program>
+    </category>
+    <category type="Mapping">
+        <program name="BWA">
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$OUTPUT_DIR</arg>
+        </program>
+        <program name="HISAT">
+        </program>
+        <program name="STAR">
+        </program>
+    </category>
+    <category type="Variant Calling">
+        <program name="FreeBayes">
+        </program>
+        <program name="BCFTools">
+        </program>
+    </category>
+    <category type="Annotation">
+        <program name="SnpEff">
+        </program>
+    </category>
 </programs>
