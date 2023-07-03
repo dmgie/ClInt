@@ -30,7 +30,7 @@
             <arg>${MAX_RAM}G</arg>
             <arg>$MAX_INTRON</arg>
         </program>
-        <program name="SPADdes">
+        <program name="SPAdes">
         </program>
         <program name="STRING">
         </program>

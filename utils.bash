@@ -149,6 +149,7 @@ _print_selected() {
         # program_full being the full description, e.g fastp (All-in-one)
         for program_full in "${category_programs[@]}"; do
             # Take only the first word of the program, as that is the actual program name e.g fastp
+            # TODO: Make it search / match lower case so to not worry about capitalisation mistakes
             program=$(echo $program_full | cut -d' ' -f1)
             if [ "${programs[$program]}" -eq 1 ]; then
                 echo -e "       $program_full"
@@ -169,6 +170,8 @@ category_chooser() {
     local -n programs=$3
     local -n order_programs=$4
 
+    echo "works1"
+
     for category in "${categories_order[@]}"; do
         echo #newline
         echo -e "\e[1m$category: \e[0m"
@@ -180,6 +183,8 @@ category_chooser() {
             fi
         done
     done
+
+    echo "works2"
     # Ask if the choices were correct
     echo "---------------------------"
     echo -e "\e[1mAre these choices correct? \e[0m"
@@ -194,6 +199,8 @@ category_chooser() {
             ;;
         esac
     done
+
+    echo "works3"
 }
 
 ## Get program arguments specified in ./arguments.xml config file
