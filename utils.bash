@@ -5,8 +5,11 @@ display_menu() {
     local prompt=$1
     local options_string=$2
 
+    # Options_string is given as a comma delimited list
+    # echo $2 >&2
+
     # Set the Internal Field Separator (IFS) to comma
-    IFS=',' read -ra options <<<"$options_string"
+    IFS='§' read -ra options <<<"$options_string"
 
     # trim newlines
     prompt=${prompt//$'\n'/}
@@ -18,7 +21,12 @@ display_menu() {
 
     echo "$prompt" >&2
     for ((i = 0; i < num_options; i++)); do
-        echo "    $((i + 1)). ${options[i]}" >&2
+        descript=$(get_description options[i])
+        if [[ -z $descript ]]; then
+            echo -e "    $((i + 1)). ${options[i]}" >&2
+        else
+            echo -e "    $((i + 1)). ${options[i]} - $descript" >&2
+        fi
     done
 
     exec </dev/tty
@@ -144,7 +152,7 @@ _print_selected() {
         category_programs=${categories[$category]}
 
         # Ignore existing spaces, and split on commas, used for the loop below
-        IFS=',' read -r -a category_programs <<<"$category_programs"
+        IFS='§' read -r -a category_programs <<<"$category_programs"
 
         # program_full being the full description, e.g fastp (All-in-one)
         for program_full in "${category_programs[@]}"; do
@@ -170,21 +178,17 @@ category_chooser() {
     local -n programs=$3
     local -n order_programs=$4
 
-    echo "works1"
-
     for category in "${categories_order[@]}"; do
         echo #newline
         echo -e "\e[1m$category: \e[0m"
         selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}")
         for program in "${order_programs[@]}"; do
             if [[ " ${selected_options[@]} " =~ " $program " ]]; then
-                echo "Works for $program"
                 programs[$program]=1
             fi
         done
     done
 
-    echo "works2"
     # Ask if the choices were correct
     echo "---------------------------"
     echo -e "\e[1mAre these choices correct? \e[0m"
@@ -199,8 +203,6 @@ category_chooser() {
             ;;
         esac
     done
-
-    echo "works3"
 }
 
 ## Get program arguments specified in ./arguments.xml config file
@@ -209,13 +211,26 @@ category_chooser() {
 ## Store strings and return
 get_arguments() {
     local -n prog=$1
-    local output=()
 
     while IFS= read -r line; do
         output+=("$line")
     done < <(xmlstarlet sel -t \
         --var prog_name="'$prog'" \
         -v '//programs/category[*]/program[@name = $prog_name]/arg' \
+        -nl temp_arguments.xml)
+
+    echo "${output[@]}"
+}
+
+## Read desription string from xml config file
+get_description() {
+    local -n prog=$1
+
+    while IFS= read -r line; do
+        output+=("$line")
+    done < <(xmlstarlet sel -t \
+        --var prog_name="'$prog'" \
+        -v '//programs/category[*]/program[@name = $prog_name]/description' \
         -nl temp_arguments.xml)
 
     echo "${output[@]}"
@@ -254,7 +269,7 @@ get_categories() {
             if [[ -z ${rna_categories["$category_type"]} ]]; then
                 rna_categories["$category_type"]=$program_name
             else
-                rna_categories["$category_type"]+=",$program_name"
+                rna_categories["$category_type"]+="§$program_name"
             fi
         fi
     done < <(xmlstarlet sel -t -c "/programs/category" "$xml_file")

@@ -145,16 +145,17 @@ RNA_Questionnaire() {
 NUM_CORES=$(get_core_count)
 MAX_RAM=$(get_available_ram)
 
+# Exchange environment variable placeholders for input variables
+# Create temporary arguments file
+
+envsubst < arguments.xml \
+         > temp_arguments.xml
+
 RNA_Questionnaire
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 #### Quality Control ####
-
-# Exchange environment variable placeholders for input variables
-# Create temporary arguments file
-envsubst < arguments.xml \
-         > temp_arguments.xml
 
 # Iterate through program list
 for program in "${!rna_programs[@]}"; do
@@ -178,7 +179,8 @@ for program in "${!rna_programs[@]}"; do
 done
 
 ## Delete temporary argument file
-rm temp_arguments.xml
+#rm temp_arguments.xml
+
 
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue
 ## TODO: Is this needed? Things like trimgalore and fastp do the trimming for you, so you don't need to pause

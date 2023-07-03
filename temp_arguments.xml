@@ -3,16 +3,16 @@
     <category type="Quality Control">
         <program name="FastQC">
             <description>Quality Control for short reads</description>
-            <arg>$INPUT_GENOME_PATH</arg>
-            <arg>$OUTPUT_DIR</arg>
+            <arg>../resources/fastq_files/</arg>
+            <arg>../output/</arg>
         </program>
         <program name="MultiQC">    
                 <description>Dont drop that dundudun</description>
         </program>
         <program name="fastp">
             <description>All-in-one (FastQC + Trimming)</description>
-            <arg>$INPUT_GENOME_PATH</arg>
-            <arg>$OUTPUT_DIR</arg>
+            <arg>../resources/fastq_files/</arg>
+            <arg>../output/</arg>
         </program>
         <program name="TrimGalore">
             <description>Quality Control for short reads</description>
@@ -21,18 +21,18 @@
     </category>
     <category type="Assembly">
         <program name="minimap2">
-            <arg>$HUMAN_REFERENCE_PATH</arg>
-            <arg>$INPUT_GENOME_PATH</arg>
-            <arg>$OUTPUT_DIR</arg>
+            <arg>../resources/reference/ref.mmi</arg>
+            <arg>../resources/fastq_files/</arg>
+            <arg>../output/</arg>
         </program>
         <program name="Trinity">
             <arg>DeNovo</arg>
-            <arg>$INPUT_GENOME_PATH</arg>
-            <arg>$HUMAN_REFERENCE_PATH</arg> 
-            <arg>$OUTPUT_DIR</arg>
-            <arg>$NUM_CORES</arg>
-            <arg>${MAX_RAM}G</arg>
-            <arg>$MAX_INTRON</arg>
+            <arg>../resources/fastq_files/</arg>
+            <arg>../resources/reference/ref.mmi</arg> 
+            <arg>../output/</arg>
+            <arg>8</arg>
+            <arg>47G</arg>
+            <arg></arg>
         </program>
         <program name="SPAdes">
         </program>
@@ -41,8 +41,8 @@
     </category>
     <category type="Mapping">
         <program name="BWA">
-            <arg>$INPUT_GENOME_PATH</arg>
-            <arg>$OUTPUT_DIR</arg>
+            <arg>../resources/fastq_files/</arg>
+            <arg>../output/</arg>
         </program>
         <program name="HISAT">
         </program>
