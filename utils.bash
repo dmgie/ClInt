@@ -177,6 +177,7 @@ category_chooser() {
     local -n categories_order=$2
     local -n programs=$3
     local -n order_programs=$4
+ 
 
     for category in "${categories_order[@]}"; do
         echo #newline
@@ -255,13 +256,17 @@ arguments_complete() {
 
 ## Read categories and asociated programs from XML file usinf xmlstarlet
 ## Store into associated array and return
-get_categories() {
+get_config() {
     local xml_file="$1"
     declare -A rna_categories
+    declare -A programss
+    declare -a rna_categories_order
+    declare -a rna_programs_order
 
     while IFS= read -r line; do
         if [[ $line == *"<category"* ]]; then
             category_type=$(echo "$line" | awk -F '"' '/category/{print $2}')
+            rna_categories_order+=("$category_type")
         fi
 
         if [[ $line == *"<program"* ]]; then
@@ -271,8 +276,9 @@ get_categories() {
             else
                 rna_categories["$category_type"]+="§$program_name"
             fi
+            rna_programs_order+=("$program_name")
+            programss["$program_name"]=0
         fi
     done < <(xmlstarlet sel -t -c "/programs/category" "$xml_file")
-
-    declare -p rna_categories
+    declare -p rna_categories rna_categories_order programss rna_programs_order
 }

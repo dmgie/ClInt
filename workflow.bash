@@ -101,68 +101,36 @@ RNA_READS_DIR=reads
 ## Save all arguments in this script to a file, if wanting it to make it more modular
 # echo "$0 $*" > "$OUTPUT_DIR"/command.txt
 
-######################################################### Workflow ########################################################
-
-## Assosciative array to store the various options for the user to select from
-## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
-## which would not be ideal when presenting the final option selection
-declare -A rna_programs
-declare -a rna_programs_order
-declare -A rna_categories
-declare -a rna_categories_order
-
-RNA_Questionnaire() {
-  # RNA-based questionnaire
-
-  eval "$(get_categories "$XML_FILE")"
-
-  rna_categories_order+=("Quality Control")     
-  rna_categories_order+=("Assembly")            
-  rna_categories_order+=("Mapping")             
-  rna_categories_order+=("Variant Calling")     
-  rna_categories_order+=("Annotation")
-
-  rna_programs["FastQC"]=0                      rna_programs_order+=("FastQC")        
-  rna_programs["MultiQC"]=0                     rna_programs_order+=("MultiQC")
-  rna_programs["fastp"]=0                       rna_programs_order+=("fastp")        
-  rna_programs["TrimGalore"]=0                  rna_programs_order+=("TrimGalore")
-  rna_programs["SPAdes"]=0                      rna_programs_order+=("SPAdes")
-  rna_programs["Trinity"]=0                     rna_programs_order+=("Trinity")
-  rna_programs["STRING"]=0                      rna_programs_order+=("STRING")
-  rna_programs["minimap2"]=0                    rna_programs_order+=("minimap2")  
-  rna_programs["HISAT"]=0                       rna_programs_order+=("HISAT")
-  rna_programs["STAR"]=0                        rna_programs_order+=("STAR")
-  rna_programs["BWA"]=0                         rna_programs_order+=("BWA")
-  rna_programs["FreeBayes"]=0                   rna_programs_order+=("FreeBayes")
-  rna_programs["BCFTools"]=0                    rna_programs_order+=("BCFTools")
-  rna_programs["SnpEff"]=0                      rna_programs_order+=("SnpEff")
-
-  # From ./utils.bash
-  category_chooser rna_categories rna_categories_order rna_programs rna_programs_order
-}
-
 ## Ask for CORE and RAM
 NUM_CORES=$(get_core_count)
 MAX_RAM=$(get_available_ram)
 
 # Exchange environment variable placeholders for input variables
 # Create temporary arguments file
-
 envsubst < arguments.xml \
          > temp_arguments.xml
 
-RNA_Questionnaire
+# Load programs, arguments, descriptions etc. from .xml config file
+eval "$(get_config "$XML_FILE")"
+                     
+# From ./utils.bash
+category_chooser rna_categories rna_categories_order programss rna_programs_order
+
+######################################################### Workflow ########################################################
+
+## Assosciative array to store the various options for the user to select from
+## The order of the options is also stored in an array, so that we can iterate over it later in order (otherwise it is random)
+## which would not be ideal when presenting the final option selection
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 #### Quality Control ####
 
 # Iterate through program list
-for program in "${!rna_programs[@]}"; do
+for program in "${!programss[@]}"; do
 
   # Execute when program entry is set to 1
-  if [ "${rna_programs[$program]}" -eq 1 ]; then
-
+  if [ "${programss[$program]}" -eq 1 ]; then
     # Get arguments from xml config file, turn into array
     arguments=$(get_arguments "program")
     arguments_array=($arguments)
@@ -179,7 +147,7 @@ for program in "${!rna_programs[@]}"; do
 done
 
 ## Delete temporary argument file
-#rm temp_arguments.xml
+rm temp_arguments.xml
 
 
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue
