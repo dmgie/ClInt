@@ -28,7 +28,7 @@
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <arg>DeNovo</arg>
+            <!-- <arg>DeNovo</arg> -->
             <arg>$INPUT_GENOME_PATH</arg>
             <arg>$HUMAN_REFERENCE_PATH</arg> 
             <arg>$OUTPUT_DIR</arg>

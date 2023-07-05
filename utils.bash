@@ -282,3 +282,11 @@ get_config() {
     done < <(xmlstarlet sel -t -c "/programs/category" "$xml_file")
     declare -p rna_categories rna_categories_order programss rna_programs_order
 }
+
+strip_extension() {
+    # Returns the filename with the extension stripped
+    local file="$1"
+    local extension="$2"
+    echo "${file##*.}"
+}
+
