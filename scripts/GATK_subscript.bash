@@ -7,6 +7,7 @@ GENOME=$1 # The human genome assembly
 BAM=$2 # The input bam file
 OUTPUT_DIR=$3 # The output directory
 
+
 # Preprocessing required to make formatting for RNA-aligned output similar to DNA aligned output
 # which is needed for HaploType caller later
 echo "Adjusting RNA bam output to allow for Haplotype caller"
