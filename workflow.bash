@@ -139,11 +139,11 @@ for program in "${!rna_programs[@]}"; do
 
     # Only run program when arguments complete returns 0
     # Execute program subscript
-    echo "Running $program, $arguments"
+    echo "Running $program using the arguments: $arguments"
     if arguments_complete "${arguments_array[@]}"; then 
       ./scripts/${program}_subscript.bash $arguments
     else
-      echo "Arguments missing, can not execute $program"
+      echo "Arguments missing - unable to execute $program"
     fi
   fi
 done
