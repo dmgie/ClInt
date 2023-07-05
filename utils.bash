@@ -257,30 +257,33 @@ arguments_complete() {
 ## Read categories and asociated programs from XML file usinf xmlstarlet
 ## Store into associated array and return
 get_config() {
+    # Using temp_ to avoid name collisions
     local xml_file="$1"
-    declare -A rna_categories
-    declare -A programss
-    declare -a rna_categories_order
-    declare -a rna_programs_order
+    local -n temp_categories=$2
+    local -n temp_categories_order=$3
+    local -n temp_programs=$4
+    local -n temp_programs_order=$5
+
 
     while IFS= read -r line; do
         if [[ $line == *"<category"* ]]; then
             category_type=$(echo "$line" | awk -F '"' '/category/{print $2}')
-            rna_categories_order+=("$category_type")
+            # Debug the categories_order array
+            temp_categories_order+=("$category_type")
         fi
 
         if [[ $line == *"<program"* ]]; then
             program_name=$(echo "$line" | awk -F '"' '/program/{print $2}')
-            if [[ -z ${rna_categories["$category_type"]} ]]; then
-                rna_categories["$category_type"]=$program_name
+            if [[ -z ${temp_categories["$category_type"]} ]]; then
+                temp_categories["$category_type"]=$program_name
             else
-                rna_categories["$category_type"]+="§$program_name"
+                temp_categories["$category_type"]+="§$program_name"
             fi
-            rna_programs_order+=("$program_name")
-            programss["$program_name"]=0
+            temp_programs_order+=("$program_name")
+            temp_programs["$program_name"]=0
         fi
     done < <(xmlstarlet sel -t -c "/programs/category" "$xml_file")
-    declare -p rna_categories rna_categories_order programss rna_programs_order
+    category_chooser temp_categories temp_categories_order temp_programs temp_programs_order
 }
 
 strip_extension() {

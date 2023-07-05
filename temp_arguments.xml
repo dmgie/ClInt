@@ -3,16 +3,16 @@
     <category type="Quality Control">
         <program name="FastQC">
             <description>A program for quality control of short reads.</description>
-            <arg>../resources/fastq_files/</arg>
-            <arg>../output/</arg>
+            <arg>README.md</arg>
+            <arg>workflow</arg>
         </program>
         <program name="MultiQC">    
                 <description>A program that collects results from multiple quality control runs.</description>
         </program>
         <program name="fastp">
             <description>An all-in-one program that combines FastQC and trimming functionality.</description>
-            <arg>../resources/fastq_files/</arg>
-            <arg>../output/</arg>
+            <arg>README.md</arg>
+            <arg>workflow</arg>
         </program>
         <program name="TrimGalore">
             <description>A program for quality control of short reads.</description>
@@ -22,18 +22,18 @@
     <category type="Assembly">
         <program name="minimap2">
             <description>A program for quality control of short reads.</description>
-            <arg>../resources/reference/ref.mmi</arg>
-            <arg>../resources/fastq_files/</arg>
-            <arg>../output/</arg>
+            <arg>workflow.bash</arg>
+            <arg>README.md</arg>
+            <arg>workflow</arg>
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <arg>DeNovo</arg>
-            <arg>../resources/fastq_files/</arg>
-            <arg>../resources/reference/ref.mmi</arg> 
-            <arg>../output/</arg>
-            <arg>8</arg>
-            <arg>47G</arg>
+            <!-- <arg>DeNovo</arg> -->
+            <arg>README.md</arg>
+            <arg>workflow.bash</arg> 
+            <arg>workflow</arg>
+            <arg>1</arg>
+            <arg>1G</arg>
             <arg></arg>
         </program>
         <program name="SPAdes">
@@ -46,8 +46,8 @@
     <category type="Mapping">
         <program name="BWA">
             <description>A program for mapping genomic sequences to a reference genome.</description>
-            <arg>../resources/fastq_files/</arg>
-            <arg>../output/</arg>
+            <arg>README.md</arg>
+            <arg>workflow</arg>
         </program>
         <program name="HISAT">
             <description>A program for mapping RNA-Seq reads to a reference genome.</description>

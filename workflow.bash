@@ -111,10 +111,14 @@ envsubst < arguments.xml \
          > temp_arguments.xml
 
 # Load programs, arguments, descriptions etc. from .xml config file
-eval "$(get_config "$XML_FILE")"
-                     
-# From ./utils.bash
-category_chooser rna_categories rna_categories_order programss rna_programs_order
+
+declare -A rna_categories
+declare -a rna_categories_order
+declare -A rna_programs
+declare -a rna_programs_order
+# get_config "$XML_FILE" categories categories_order programs programs_order
+get_config "$XML_FILE" rna_categories rna_categories_order rna_programs rna_programs_order
+
 
 ######################################################### Workflow ########################################################
 
