@@ -4,6 +4,7 @@
 display_menu() {
     local prompt=$1
     local options_string=$2
+    local single_flag=$3
 
     # Options_string is given as a comma delimited list
     # echo $2 >&2
@@ -37,44 +38,66 @@ display_menu() {
 
     # NOTE: We can replace the "Selected: " part of the prompt with the actual name (using `options[choice-1]`)
     # but it might fill up the horizontal space a lot if the names are long
-    # Though it might be a bit more advnatageous so you don't need to keep looking at the list
+    # Though it might be a bit more advantageous so you don't need to keep looking at the list
     # of programs the entire time
-    # NOTE: Maybe remove the deselection if its repeated? Don't know
+    # NOTE: Maybe remove the deselection if it's repeated? Don't know
     # FIXME: For some reason we can for one of them, enter it twice. Fix this somehow
     # FIXME: Comma is leftover after deselecting, fix this somehow.
-    while true; do
-        read -rp $'[1mEnter your choice [1-'$num_options'][Selected: '"$current_selection"']: [0m' choice
-        if [[ -z $choice ]]; then
-            break
-        # if choice is already selected, deselect
-        elif [[ $choice =~ ^[1-$num_options]$ ]] && [[ $current_selection =~ $choice ]]; then
-            selected_options=("${selected_options[@]/${options[choice - 1]}/}")
-            current_selection=${current_selection//$choice/}
-            # if selected_options=(); then
-            #     current_selection=""
-            # fi
-            echo "    deselected: ${options[choice - 1]}" >&2
-        elif [[ $choice =~ ^[1-$num_options]$ ]]; then
-            selected_options+=("${options[choice - 1]}")
 
-            # If its the first, don't add a comma
-            if [[ -z $current_selection ]]; then
-                current_selection="$choice"
+    if [[ $single_flag == "single" ]]; then
+        while true; do
+            read -rp $'[1mEnter your choice [1-'$num_options'][Selected: '"$current_selection"']: [0m' choice
+            if [[ -z $choice ]]; then
+                break
+            elif [[ $choice =~ ^[1-$num_options]$ ]]; then
+                if [[ $current_selection == "$choice" ]]; then
+                    selected_options=("${selected_options[@]/${options[choice - 1]}/}")
+                    current_selection=""
+                    echo "    deselected: ${options[choice - 1]}" >&2
+                else
+                    selected_options=("${options[choice - 1]}")
+                    current_selection="$choice"
+                    echo "    selected: ${options[choice - 1]}" >&2
+                fi
             else
-                current_selection="${current_selection},$choice"
+                echo "Invalid choice. Please try again." >&2
             fi
-            echo "    selected: ${options[choice - 1]}" >&2
-
-        # if comma separated list is entered
-        elif [[ $choice =~ ^[1-$num_options](,[1-$num_options])*$ ]]; then
-            IFS=',' read -ra choices <<<"$choice"
-            for choice in "${choices[@]}"; do
+        done
+    else
+        while true; do
+            read -rp $'[1mEnter your choice [1-'$num_options'][Selected: '"$current_selection"']: [0m' choice
+            if [[ -z $choice ]]; then
+                break
+            # if choice is already selected, deselect
+            elif [[ $choice =~ ^[1-$num_options]$ ]] && [[ $current_selection =~ $choice ]]; then
+                selected_options=("${selected_options[@]/${options[choice - 1]}/}")
+                current_selection=${current_selection//$choice/}
+                # if selected_options=(); then
+                #     current_selection=""
+                # fi
+                echo "    deselected: ${options[choice - 1]}" >&2
+            elif [[ $choice =~ ^[1-$num_options]$ ]]; then
                 selected_options+=("${options[choice - 1]}")
-            done
-        else
-            echo "Invalid choice. Please try again." >&2
-        fi
-    done
+
+                # If its the first, don't add a comma
+                if [[ -z $current_selection ]]; then
+                    current_selection="$choice"
+                else
+                    current_selection="${current_selection},$choice"
+                fi
+                echo "    selected: ${options[choice - 1]}" >&2
+
+            # if comma separated list is entered
+            elif [[ $choice =~ ^[1-$num_options](,[1-$num_options])*$ ]]; then
+                IFS=',' read -ra choices <<<"$choice"
+                for choice in "${choices[@]}"; do
+                    selected_options+=("${options[choice - 1]}")
+                done
+            else
+                echo "Invalid choice. Please try again." >&2
+            fi
+        done
+    fi
 
     echo "${selected_options[@]}"
 }
@@ -169,6 +192,7 @@ _print_selected() {
 ## Display a menu for each category, and allow the user to select which programs they want to run
 ## If multiple are selected, they are returned as space delimited
 ## Switch the names in programs to 1 if they are selected
+## Only have multiple choice for assembly step
 category_chooser() {
     # TODO: Maybe make sure at least one option is selected?
     # NOTE: For the above tood: maybe not, since sometimes we just want to
@@ -182,7 +206,12 @@ category_chooser() {
     for category in "${categories_order[@]}"; do
         echo #newline
         echo -e "\e[1m$category: \e[0m"
-        selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}")
+        # Only allow choosing for assembly
+        if [[ $category == "Assembly" ]]; then
+            selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}")
+        else
+            selected_options=$(display_menu "    Select the programs you want to run:" "${categories[$category]}" "single")
+        fi
         for program in "${order_programs[@]}"; do
             if [[ " ${selected_options[@]} " =~ " $program " ]]; then
                 programs[$program]=1
