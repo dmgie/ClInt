@@ -7,6 +7,8 @@ GENOME=$1 # The human genome assembly
 BAM=$2 # The input bam file
 OUTPUT_DIR=$3 # The output directory
 
+# Source arrays from temp_variables.sh
+source $WORKING_DIR/temp_variables.sh
 
 # Preprocessing required to make formatting for RNA-aligned output similar to DNA aligned output
 # which is needed for HaploType caller later
