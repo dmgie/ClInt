@@ -5,6 +5,7 @@
 
 GENOME=$1 # The human genome assembly
 BAM=$2 # The input bam file
+OUTPUT_DIR=$3 # The output directory
 
 # Preprocessing required to make formatting for RNA-aligned output similar to DNA aligned output
 # which is needed for HaploType caller later
@@ -12,7 +13,7 @@ echo "Adjusting RNA bam output to allow for Haplotype caller"
 gatk SplitNCigarReads \
     -R $GENOME \
     -I $BAM \
-    -O $BAM-output.bam
+    -O ${OUTPUT_DIR}/${BAM}-split.bam
 
 
 # OPTIONAL: If known polymorphic sites (.vcf file) are there, we can skip over them to exclude from recalibration
@@ -32,7 +33,7 @@ gatk --java-options "-Xmx4g" HaplotypeCaller  \
 gatk --java-options "-Xmx4g" HaplotypeCaller  \
     -R $GENOME \
     -I $BAM \
-    -O $BAM-output.vcf.gz \
+    -O ${OUTPUT_DIR}/${BAM}-output.g.vcf.gz \
     -bamout $BAM-bamout.bam
 
 
@@ -41,7 +42,7 @@ gatk --java-options "-Xmx4g" HaplotypeCaller  \
 echo "Running variant filtration for..."
 gatk VariantFiltration \
     -R $GENOME \
-    -V $BAM-output.g.vcf.gz \
+    -V ${OUTPUT_DIR}/${BAM}-output.g.vcf.gz \
     -O output.vcf.gz \
     --filter-name "my_filter1" \
     --filter-expression "AB < 0.2" \

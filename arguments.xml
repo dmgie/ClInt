@@ -57,6 +57,12 @@
         </program>
     </category>
     <category type="Variant Calling">
+        <program name="GATK">
+            <description>Haplotype calling</description>
+            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$BAM_FILE</arg>
+            <arg>$OUTPUT_DIR</arg>
+        </program>
         <program name="FreeBayes">
             <description>A program for variant discovery and genotyping.</description>
         </program>

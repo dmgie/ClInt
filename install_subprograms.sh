@@ -67,3 +67,9 @@ if [ ! -d ./programs/xmlstarlet-1.6.1 ] || command -v xmlstarlet >/dev/null 2>&1
     cd ..
 fi
 
+# bedtools
+if [ ! -d ./programs/bedtools2 ] || command -v bedtools >/dev/null 2>&1; then
+    wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools.static
+    mv bedtools.static programs/bedtools
+    chmod a+x programs/bedtools
+fi

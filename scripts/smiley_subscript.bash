@@ -23,3 +23,6 @@ bedtools makewindows -g $GENOME -w 500 > windows.bed
 # -c is the number of reads that are within a region, not just starting inside it
 # -x OPTIONAL, if the index file is not in the same folder
 samtools bedcov -c windows.bed $bam > $i.cov
+
+
+
