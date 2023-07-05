@@ -290,3 +290,4 @@ strip_extension() {
     echo "${file##*.}"
 }
 
+

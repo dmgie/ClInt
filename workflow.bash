@@ -154,3 +154,6 @@ rm temp_arguments.xml
 ## TODO: Is this needed? Things like trimgalore and fastp do the trimming for you, so you don't need to pause
 ##echo -e "\e[1m Read analysis complete, check quality and \e[0m"
 ##read -p "Press enter to continue..."
+
+
+# TODO: Adapt towards single end or double end read
