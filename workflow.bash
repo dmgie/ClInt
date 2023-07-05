@@ -131,10 +131,10 @@ echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 #### Quality Control ####
 
 # Iterate through program list
-for program in "${!programss[@]}"; do
+for program in "${!rna_programs[@]}"; do
 
   # Execute when program entry is set to 1
-  if [ "${programss[$program]}" -eq 1 ]; then
+  if [ "${rna_programs[$program]}" -eq 1 ]; then
     # Get arguments from xml config file, turn into array
     arguments=$(get_arguments "program")
     arguments_array=($arguments)
