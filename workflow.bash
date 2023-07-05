@@ -116,8 +116,8 @@ declare -A rna_categories
 declare -a rna_categories_order
 declare -A rna_programs
 declare -a rna_programs_order
-
-get_config "$XML_FILE" rna_categories rna_categories_order rna_programs rna_programs_order 
+# get_config "$XML_FILE" categories categories_order programs programs_order
+get_config "$XML_FILE" rna_categories rna_categories_order rna_programs rna_programs_order
 
 
 ######################################################### Workflow ########################################################
@@ -127,6 +127,8 @@ get_config "$XML_FILE" rna_categories rna_categories_order rna_programs rna_prog
 ## which would not be ideal when presenting the final option selection
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
+
+#### Quality Control ####
 
 # Iterate through program list
 for program in "${!rna_programs[@]}"; do
@@ -139,11 +141,11 @@ for program in "${!rna_programs[@]}"; do
 
     # Only run program when arguments complete returns 0
     # Execute program subscript
-    echo "Running $program using the arguments: $arguments"
+    echo "Running $program, $arguments"
     if arguments_complete "${arguments_array[@]}"; then 
       ./scripts/${program}_subscript.bash $arguments
     else
-      echo "Arguments missing - unable to execute $program"
+      echo "Arguments missing, can not execute $program"
     fi
   fi
 done
