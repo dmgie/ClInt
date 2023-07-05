@@ -55,5 +55,15 @@ if [ ! -d ./programs/htslib-1.17 ] || command -v htsfile >/dev/null 2>&1; then
     cd ../..
 fi
 
-
+# xmlstarlet is usually bundled with linux distributions, optinally get download it
+if [ ! -d ./programs/xmlstarlet-1.6.1 ] || command -v xmlstarlet >/dev/null 2>&1; then
+    wget https://downloads.sourceforge.net/project/xmlstar/xmlstarlet/1.6.1/xmlstarlet-1.6.1.tar.gz?ts=gAAAAABkpRVrrcduYSHBdvi9EFwfzk4NSWlvXRGaZEaztTNIGVQf6VhbMbJzKZePp-owPWQxpbqj1CBoBHv8-BDrKwaQEydQHQ%3D%3D&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fxmlstar%2Ffiles%2Flatest%2Fdownload
+    tar -xzf xmlstarlet-1.6.1.tar.gz
+    rm xmlstarlet-1.6.1.tar.gz
+    cd xmlstarlet-1.6.1
+    ./configure --prefix=../ # To install into programs folder
+    make
+    make install
+    cd ..
+fi
 
