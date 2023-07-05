@@ -119,6 +119,8 @@ declare -a rna_programs_order
 # get_config "$XML_FILE" categories categories_order programs programs_order
 get_config "$XML_FILE" rna_categories rna_categories_order rna_programs rna_programs_order
 
+# Export the variables so that they can be used in the subscripts
+declare -p rna_categories rna_categories_order rna_programs rna_programs_order > temp_variables.sh
 
 ######################################################### Workflow ########################################################
 
@@ -152,6 +154,7 @@ done
 
 ## Delete temporary argument file
 rm temp_arguments.xml
+rm temp_variables.sh
 
 
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue
