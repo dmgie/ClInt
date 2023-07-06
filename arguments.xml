@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
+<!-- DO NOT CHANGE THE ORDERING OF THE ARGUMENTS -->
 <programs>
     <category type="Quality Control">
         <program name="FastQC">
             <description>A program for quality control of short reads.</description>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>
         <program name="MultiQC">    
@@ -11,7 +12,7 @@
         </program>
         <program name="fastp">
             <description>An all-in-one program that combines FastQC and trimming functionality.</description>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>
         <program name="TrimGalore">
@@ -21,20 +22,20 @@
     </category>
     <category type="Assembly">
         <program name="minimap2">
-            <description>A program for quality control of short reads.</description>
+            <description>A mapping tool for RNA-seq experiments</description>
             <arg>$HUMAN_REFERENCE_PATH</arg>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <arg>DeNovo</arg>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>DeNovo</arg>   <!-- DeNovo or Guided -->
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$HUMAN_REFERENCE_PATH</arg> 
             <arg>$OUTPUT_DIR</arg>
             <arg>$NUM_CORES</arg>
             <arg>${MAX_RAM}G</arg>
-            <arg>$MAX_INTRON</arg>
+            <arg>$MAX_INTRON</arg> <!-- Adjustable -->
         </program>
         <program name="SPAdes">
             <description>A genome assembly program.</description>
@@ -46,7 +47,7 @@
     <category type="Mapping">
         <program name="BWA">
             <description>A program for mapping genomic sequences to a reference genome.</description>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>
         <program name="HISAT">
@@ -59,7 +60,7 @@
     <category type="Variant Calling">
         <program name="GATK">
             <description>Haplotype calling</description>
-            <arg>$INPUT_GENOME_PATH</arg>
+            <arg>$INPUT_READS_PATH</arg>
             <arg>$BAM_FILE</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>

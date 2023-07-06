@@ -13,11 +13,11 @@ export XML_FILE="./arguments.xml"
 ## TODO: Do we even want this? Maybe prompt for user input?
 ## It might get unwieldy if we have a lot of arguments for every program
 
-export INPUT_GENOME_PATH="INPUT_GENOME_PATH_EMPTY"
+export INPUT_READS_PATH="INPUT_READS_PATH_EMPTY"
 export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
 export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
-export OUTPUT_DIR="OUTPUT_DIR_EMPTY"
 export WORKING_DIR=$(pwd)
+export OUTPUT_DIR="OUTPUT_DIR_EMPTY" # TODO: Maybe default this to "$WORKING_DIR/output"
 export NUM_CORES="NUM_CORES_EMPTY"
 export MAX_RAM="MAX_RAM_EMPTY"
 
@@ -25,9 +25,9 @@ export MAX_RAM="MAX_RAM_EMPTY"
 _setArgs() {
   while [ "${1:-}" != "" ]; do
     case "$1" in
-    "-i" | "--input-genome")
+    "-i" | "--input-reads")
       shift
-      INPUT_GENOME_PATH=$1
+      INPUT_READS_PATH=$1
       ;;
     "-r" | "--reference")
       shift
@@ -60,7 +60,7 @@ _log() {
   echo "Ran script at: [$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
   echo -e "\e[32mUsed Arguments:\e[0m"
   # Bold escape sequence for the input arguments until the colon
-  _log_format "Input Genome" "$INPUT_GENOME_PATH"
+  _log_format "Input Genome" "$INPUT_READS_PATH"
   _log_format "Human Reference" "$HUMAN_REFERENCE_PATH"
   _log_format "Human Reference GFF" "$HUMAN_REFERENCE_GFF_PATH"
   _log_format "Output Directory" "$OUTPUT_DIR"
@@ -76,7 +76,6 @@ _log_format() {
 # TODO: If a command accepts cores/threads/ram, then we should add it to the command
 SPADES_PATH=spades.py
 FASTQC_PATH=fastqc
-FASTQC_COMMAND="fastqc -t $NUM_CORES -o $OUTPUT_DIR"
 BWA_PATH=bwa
 SAMTOOLS_PATH=samtools
 BCFTOOLS_PATH=bcftools
@@ -84,8 +83,8 @@ FREEBAYES_PATH=freebayes
 VCFUTILS_PATH=vcfutils.pl
 SNPEFF_PATH=snpeff.jar
 SNPEFF_CONFIG_PATH=snpEff.config
-FASTP=./scripts/fastp
-MINIMAP2=./scripts/minimap2/minimap2
+FASTP=fastp
+MINIMAP2=minimap2
 # .... a lot more needed
 
 ## Argument Parsing and initial logging
@@ -102,8 +101,8 @@ RNA_READS_DIR=reads
 # echo "$0 $*" > "$OUTPUT_DIR"/command.txt
 
 ## Ask for CORE and RAM
-NUM_CORES=$(get_core_count)
-MAX_RAM=$(get_available_ram)
+export NUM_CORES=$(get_core_count)
+export MAX_RAM=$(get_available_ram)
 
 # Exchange environment variable placeholders for input variables
 # Create temporary arguments file
@@ -130,8 +129,8 @@ declare -p rna_categories rna_categories_order rna_programs rna_programs_order >
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
-#### Quality Control ####
-
+=======
+# TODO: Comapre subscripts using lowercase to avoid capitlisation errors
 # Iterate through program list
 for program in "${!rna_programs[@]}"; do
 
@@ -154,7 +153,7 @@ done
 
 ## Delete temporary argument file
 rm temp_arguments.xml
-rm temp_variables.sh
+# rm temp_variables.sh
 
 
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue
@@ -164,3 +163,5 @@ rm temp_variables.sh
 
 
 # TODO: Adapt towards single end or double end read
+
+

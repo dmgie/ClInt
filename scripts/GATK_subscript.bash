@@ -8,11 +8,16 @@ OUTPUT_DIR=$3 # The output directory
 # Source arrays from temp_variables.sh
 source $WORKING_DIR/temp_variables.sh
 
-# The input bam file
-BAM="${OUTPUT_DIR}_${program}_output/" *.bam
+# TODO: Split the string then loop over it
+assembly_programs=$(${rna_categories["Assembly"]} | tr '§' ' ')
+for program in $assembly_programs; do
+    if [[ rna_programs["${program}"] -eq 1 ]]; then
+        echo $program
+    fi
+done
 
-#Preprocessing required to make formatting for RNA-aligned output similar to DNA aligned output
-#which is needed for HaploType caller later
+# Preprocessing required to make formatting for RNA-aligned output similar to DNA aligned output
+# which is needed for HaploType caller later
 echo "Adjusting RNA bam output to allow for Haplotype caller"
 gatk SplitNCigarReads \
     -R $GENOME \

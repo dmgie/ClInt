@@ -53,7 +53,7 @@ _log(){
     echo "Ran script at: [$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
     echo -e "\e[32mUsed Arguments:\e[0m"
     # Bold escape sequence for the input arguments until the colon
-    _log_format "Input Genome" "$INPUT_GENOME_PATH"
+    _log_format "Input Genome" "$INPUT_READS_PATH"
     _log_format "Human Reference" "$HUMAN_REFERENCE_PATH"
     _log_format "Human Reference GFF" "$HUMAN_REFERENCE_GFF_PATH"
     _log_format "Output Directory" "$OUTPUT_DIR"
@@ -201,17 +201,17 @@ echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
 #### Quality Control ####
 
-PROCESSED_READS_DIR="$INPUT_GENOME_PATH"
+PROCESSED_READS_DIR="$INPUT_READS_PATH"
 
 ## FastQC
 if [ "${programs[FastQC]}" -eq 1 ]; then
-   ./scripts/fastqc_subscript.bash "$INPUT_GENOME_PATH"\
+   ./scripts/fastqc_subscript.bash "$INPUT_READS_PATH"\
                                    "$OUTPUT_DIR"
 fi
 
 ## fastp
 if [ "${programs[fastp]}" -eq 1 ]; then
-   ./scripts/fastp_subscript.bash "$INPUT_GENOME_PATH"\
+   ./scripts/fastp_subscript.bash "$INPUT_READS_PATH"\
                                   "$OUTPUT_DIR"
 
     PROCESSED_READS_DIR="${OUTPUT_DIR}/fastp_output"
@@ -244,6 +244,6 @@ fi
 
 ## DNA Pipeline
 #echo "DNA pipeline starting"
-#./scripts/dna_pipeline.sh "$INPUT_GENOME_PATH" "$OUTPUT_DIR" "$HUMAN_REFERENCE_PATH"
+#./scripts/dna_pipeline.sh "$INPUT_READS_PATH" "$OUTPUT_DIR" "$HUMAN_REFERENCE_PATH"
 
 
