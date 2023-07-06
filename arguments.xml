@@ -29,13 +29,13 @@
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <arg>DeNovo</arg>   <!-- DeNovo or Guided -->
+            <arg>Guided</arg>   <!-- DeNovo or Guided -->
             <arg>$INPUT_READS_PATH</arg>
             <arg>$HUMAN_REFERENCE_PATH</arg> 
             <arg>$OUTPUT_DIR</arg>
             <arg>$NUM_CORES</arg>
             <arg>${MAX_RAM}G</arg>
-            <arg>$MAX_INTRON</arg> <!-- Adjustable -->
+            <arg>10000</arg> <!-- $MAX_INTRON -->
         </program>
         <program name="SPAdes">
             <description>A genome assembly program.</description>

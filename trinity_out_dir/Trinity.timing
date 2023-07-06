@@ -1,0 +1,5 @@
+Statistics:
+===========
+Trinity Version:      Trinity-v2.14.0
+Compiler:             GCC
+Trinity Parameters:   --genome_guided_bam ../output//fastp_output/ --genome_guided_max_intron 10000 --max_memory 47G --CPU 8

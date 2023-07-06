@@ -17,7 +17,7 @@ for program in ${rna_categories["Quality Control"]}; do
 
     ## Trinity DeNovo / Genome Guided Assembly
 
-    input_dir="${output_dir}${program}_output/"
+    input_dir="${output_dir}/${program}_output/"
 
     echo $input_dir
 
