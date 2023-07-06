@@ -37,7 +37,7 @@ for program in ${rna_categories["Quality Control"]}; do
       done
       ;;
 
-    Ref_Based)
+    Guided)
       echo "Trinity Genome-Guided Assembly Mode"
       for file in "${input_dir}/"*fastq; do
         Trinity --genome_guided_bam $input_dir \
