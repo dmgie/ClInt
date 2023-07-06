@@ -16,8 +16,8 @@ export XML_FILE="./arguments.xml"
 export INPUT_GENOME_PATH="INPUT_GENOME_PATH_EMPTY"
 export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
 export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
-export OUTPUT_DIR="OUTPUT_DIR_EMPTY"
 export WORKING_DIR=$(pwd)
+export OUTPUT_DIR="OUTPUT_DIR_EMPTY" # TODO: Maybe default this to "$WORKING_DIR/output"
 export NUM_CORES="NUM_CORES_EMPTY"
 export MAX_RAM="MAX_RAM_EMPTY"
 
@@ -76,7 +76,6 @@ _log_format() {
 # TODO: If a command accepts cores/threads/ram, then we should add it to the command
 SPADES_PATH=spades.py
 FASTQC_PATH=fastqc
-FASTQC_COMMAND="fastqc -t $NUM_CORES -o $OUTPUT_DIR"
 BWA_PATH=bwa
 SAMTOOLS_PATH=samtools
 BCFTOOLS_PATH=bcftools
@@ -84,8 +83,8 @@ FREEBAYES_PATH=freebayes
 VCFUTILS_PATH=vcfutils.pl
 SNPEFF_PATH=snpeff.jar
 SNPEFF_CONFIG_PATH=snpEff.config
-FASTP=./scripts/fastp
-MINIMAP2=./scripts/minimap2/minimap2
+FASTP=fastp
+MINIMAP2=minimap2
 # .... a lot more needed
 
 ## Argument Parsing and initial logging
@@ -164,4 +163,3 @@ rm temp_variables.sh
 # TODO: Adapt towards single end or double end read
 
 
-./scripts/smiley_subscript.bash
