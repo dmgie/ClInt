@@ -130,7 +130,6 @@ declare -p rna_categories rna_categories_order rna_programs rna_programs_order >
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
-=======
 # TODO: Comapre subscripts using lowercase to avoid capitlisation errors
 # Iterate through program list
 for program in "${!rna_programs[@]}"; do
