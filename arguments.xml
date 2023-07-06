@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- DO NOT CHANGE THE ORDERING OF THE ARGUMENTS -->
 <programs>
     <category type="Quality Control">
         <program name="FastQC">
@@ -28,13 +29,13 @@
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <arg>DeNovo</arg>   <!--This can be either: DeNovo or Ref-Based // TODO: Change this maybe to Guided, instead of Ref-Based (would need to change the script file as well-->
+            <arg>DeNovo</arg>   <!-- DeNovo or Guided -->
             <arg>$INPUT_READS_PATH</arg>
             <arg>$HUMAN_REFERENCE_PATH</arg> 
             <arg>$OUTPUT_DIR</arg>
             <arg>$NUM_CORES</arg>
             <arg>${MAX_RAM}G</arg>
-            <arg>$MAX_INTRON</arg>
+            <arg>$MAX_INTRON</arg> <!-- Adjustable -->
         </program>
         <program name="SPAdes">
             <description>A genome assembly program.</description>
