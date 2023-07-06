@@ -1,4 +1,0 @@
-declare -A rna_categories=([Mapping]="BWA§HISAT§STAR" [Annotation]="SnpEff" ["Quality Control"]="FastQC§MultiQC§fastp§TrimGalore" ["Variant Calling"]="GATK§FreeBayes§BCFTools" [Assembly]="minimap2§Trinity§SPAdes§STRING" )
-declare -a rna_categories_order=([0]="Quality Control" [1]="Assembly" [2]="Mapping" [3]="Variant Calling" [4]="Annotation")
-declare -A rna_programs=([GATK]="1" [HISAT]="0" [BCFTools]="0" [SnpEff]="0" [FastQC]="0" [STAR]="0" [SPAdes]="1" [STRING]="1" [minimap2]="1" [MultiQC]="0" [BWA]="1" [fastp]="0" [TrimGalore]="0" [FreeBayes]="0" [Trinity]="1" )
-declare -a rna_programs_order=([0]="FastQC" [1]="MultiQC" [2]="fastp" [3]="TrimGalore" [4]="minimap2" [5]="Trinity" [6]="SPAdes" [7]="STRING" [8]="BWA" [9]="HISAT" [10]="STAR" [11]="GATK" [12]="FreeBayes" [13]="BCFTools" [14]="SnpEff")

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <!-- DO NOT CHANGE THE ORDERING OF THE ARGUMENTS -->
+<!-- TODO: Allow a global variable to check whether single or paired end reads -->
 <programs>
     <category type="Quality Control">
         <program name="FastQC">
@@ -17,7 +18,6 @@
         </program>
         <program name="TrimGalore">
             <description>A program for quality control of short reads.</description>
-
         </program>
     </category>
     <category type="Assembly">
@@ -39,6 +39,8 @@
         </program>
         <program name="SPAdes">
             <description>A genome assembly program.</description>
+            <arg>$INPUT_READS_PATH</arg>
+            <!-- <arg>SINGLE OR PAIRED</arg> -->
         </program>
         <program name="STRING">
             <description>A program for protein-protein interaction network analysis.</description>

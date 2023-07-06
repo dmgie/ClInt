@@ -14,7 +14,7 @@ for file in "${input_dir}/"*.fastq *fq; do
   # Extract the filename without extension
   base_name=$(basename "$file" .fq)
 
-  ./programs/minimap2/minimap2 -a "$human_reference"\
+  $MINIMAP_PATH -a "$human_reference"\
                                   "$file" > \
                                   "${output_dir_minimap2}/${base_name}.sam"
 

@@ -17,7 +17,7 @@ export INPUT_READS_PATH="INPUT_READS_PATH_EMPTY"
 export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
 export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
 export WORKING_DIR=$(pwd)
-export OUTPUT_DIR="OUTPUT_DIR_EMPTY" # TODO: Maybe default this to "$WORKING_DIR/output"
+export OUTPUT_DIR="${WORKING_DIR}/output"
 export NUM_CORES="NUM_CORES_EMPTY"
 export MAX_RAM="MAX_RAM_EMPTY"
 
@@ -74,17 +74,18 @@ _log_format() {
 # TODO: Make it read from a template file instead of hardcoding it here
 # e.g "SPADES_PATH=" and left empty for them to fill in. This is then read in using a function
 # TODO: If a command accepts cores/threads/ram, then we should add it to the command
-SPADES_PATH=spades.py
-FASTQC_PATH=fastqc
-BWA_PATH=bwa
-SAMTOOLS_PATH=samtools
-BCFTOOLS_PATH=bcftools
-FREEBAYES_PATH=freebayes
-VCFUTILS_PATH=vcfutils.pl
-SNPEFF_PATH=snpeff.jar
-SNPEFF_CONFIG_PATH=snpEff.config
-FASTP=fastp
-MINIMAP2=minimap2
+export SPADES_PATH=$(program_path spades.py)
+export FASTQC_PATH=$(program_path fastqc)
+export BWA_PATH=$(program_path bwa)
+export SAMTOOLS_PATH=$(program_path samtools)
+export BCFTOOLS_PATH=$(program_path bcftools)
+export FREEBAYES_PATH=$(program_path freebayes)
+export VCFUTILS_PATH=$(program_path vcfutils.pl)
+export SNPEFF_PATH=$(program_path snpeff.jar)
+export SNPEFF_CONFIG_PATH=$(program_path snpEff.config)
+export FASTP_PATH=$(program_path fastp)
+export MINIMAP_PATH=$(program_path minimap2)
+
 # .... a lot more needed
 
 ## Argument Parsing and initial logging
