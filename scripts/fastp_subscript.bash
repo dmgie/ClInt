@@ -15,7 +15,7 @@ for file in "${input_dir}/"*.fastq *.fq; do
 
    # Perform quality checking / preprocessing with fastp
    ./programs/fastp -i "$file" \
-                   -o "${output_dir_fastp}/${base_name}_trimmed.fq" \
+                   -o "${output_dir_fastp}/${base_name}_trimmed.fastq" \
                    --json /dev/null \
                    --html /dev/null
 
