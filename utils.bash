@@ -326,3 +326,13 @@ to_lower_case() {
     # Convert a string to lower case
     echo "$1" | tr '[:upper:]' '[:lower:]'
 }
+
+program_path() {
+    # Check if program exists in PATH, if not use programs/ directory
+    local program="$1"
+    local program_path=$(command -v "$program")
+    if [[ -z "$program_path" ]]; then
+        program_path="programs/$program"
+    fi
+    echo "$program_path"
+}

@@ -85,7 +85,18 @@ SNPEFF_PATH=snpeff.jar
 SNPEFF_CONFIG_PATH=snpEff.config
 FASTP=fastp
 MINIMAP2=minimap2
-# .... a lot more needed
+
+# SPADES_PATH=$(program_path "spades")
+# FASTQC_PATH=$(program_path "fastqc")
+# BWA_PATH=$(program_path "bwa")
+# SAMTOOLS_PATH=$(program_path "samtools")
+# BCFTOOLS_PATH=$(program_path "bcftools")
+# FREEBAYES_PATH=$(program_path "freebayes")
+# VCFUTILS_PATH=$(program_path "vcfutils.pl")
+# SNPEFF_PATH=$(program_path "snpeff.jar")
+# SNPEFF_CONFIG_PATH=$(program_path "snpEff.config")
+# FASTP=$(program_path "fastp")
+# MINIMAP2=$(program_path "minimap2")
 
 ## Argument Parsing and initial logging
 _setArgs "$@"
