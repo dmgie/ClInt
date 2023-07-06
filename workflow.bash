@@ -102,8 +102,8 @@ RNA_READS_DIR=reads
 # echo "$0 $*" > "$OUTPUT_DIR"/command.txt
 
 ## Ask for CORE and RAM
-NUM_CORES=$(get_core_count)
-MAX_RAM=$(get_available_ram)
+export NUM_CORES=$(get_core_count)
+export MAX_RAM=$(get_available_ram)
 
 # Exchange environment variable placeholders for input variables
 # Create temporary arguments file
@@ -162,3 +162,6 @@ rm temp_variables.sh
 
 
 # TODO: Adapt towards single end or double end read
+
+
+./scripts/smiley_subscript.bash
