@@ -13,7 +13,7 @@ export XML_FILE="./arguments.xml"
 ## TODO: Do we even want this? Maybe prompt for user input?
 ## It might get unwieldy if we have a lot of arguments for every program
 
-export INPUT_GENOME_PATH="INPUT_GENOME_PATH_EMPTY"
+export INPUT_READS_PATH="INPUT_READS_PATH_EMPTY"
 export HUMAN_REFERENCE_PATH="HUMAN_REFERENCE_PATH_EMPTY"
 export HUMAN_REFERENCE_GFF_PATH="HUMAN_REFERENCE_GFF_PATH_EMPTY"
 export WORKING_DIR=$(pwd)
@@ -25,9 +25,9 @@ export MAX_RAM="MAX_RAM_EMPTY"
 _setArgs() {
   while [ "${1:-}" != "" ]; do
     case "$1" in
-    "-i" | "--input-genome")
+    "-i" | "--input-reads")
       shift
-      INPUT_GENOME_PATH=$1
+      INPUT_READS_PATH=$1
       ;;
     "-r" | "--reference")
       shift
@@ -60,7 +60,7 @@ _log() {
   echo "Ran script at: [$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
   echo -e "\e[32mUsed Arguments:\e[0m"
   # Bold escape sequence for the input arguments until the colon
-  _log_format "Input Genome" "$INPUT_GENOME_PATH"
+  _log_format "Input Genome" "$INPUT_READS_PATH"
   _log_format "Human Reference" "$HUMAN_REFERENCE_PATH"
   _log_format "Human Reference GFF" "$HUMAN_REFERENCE_GFF_PATH"
   _log_format "Output Directory" "$OUTPUT_DIR"
@@ -85,18 +85,7 @@ SNPEFF_PATH=snpeff.jar
 SNPEFF_CONFIG_PATH=snpEff.config
 FASTP=fastp
 MINIMAP2=minimap2
-
-# SPADES_PATH=$(program_path "spades")
-# FASTQC_PATH=$(program_path "fastqc")
-# BWA_PATH=$(program_path "bwa")
-# SAMTOOLS_PATH=$(program_path "samtools")
-# BCFTOOLS_PATH=$(program_path "bcftools")
-# FREEBAYES_PATH=$(program_path "freebayes")
-# VCFUTILS_PATH=$(program_path "vcfutils.pl")
-# SNPEFF_PATH=$(program_path "snpeff.jar")
-# SNPEFF_CONFIG_PATH=$(program_path "snpEff.config")
-# FASTP=$(program_path "fastp")
-# MINIMAP2=$(program_path "minimap2")
+# .... a lot more needed
 
 ## Argument Parsing and initial logging
 _setArgs "$@"
