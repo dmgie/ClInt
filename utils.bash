@@ -322,4 +322,7 @@ strip_extension() {
     echo "${file##*.}"
 }
 
-
+to_lower_case() {
+    # Convert a string to lower case
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+}
