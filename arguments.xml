@@ -21,14 +21,14 @@
     </category>
     <category type="Assembly">
         <program name="minimap2">
-            <description>A program for quality control of short reads.</description>
+            <description>A mapping tool for RNA-seq experiments</description>
             <arg>$HUMAN_REFERENCE_PATH</arg>
             <arg>$INPUT_GENOME_PATH</arg>
             <arg>$OUTPUT_DIR</arg>
         </program>
         <program name="Trinity">
             <description> A De Novo transcriptome assembly program.</description>
-            <!-- <arg>DeNovo</arg> -->
+            <arg>DeNovo</arg>   <!--This can be either: DeNovo or Ref-Based // TODO: Change this maybe to Guided, instead of Ref-Based (would need to change the script file as well-->
             <arg>$INPUT_GENOME_PATH</arg>
             <arg>$HUMAN_REFERENCE_PATH</arg> 
             <arg>$OUTPUT_DIR</arg>
