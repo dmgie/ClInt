@@ -318,8 +318,7 @@ get_config() {
 strip_extension() {
     # Returns the filename with the extension stripped
     local file="$1"
-    local extension="$2"
-    echo "${file##*.}"
+    echo "${file%%.*}"
 }
 
 to_lower_case() {
