@@ -13,13 +13,9 @@ IFS="§"
 
 for program in ${rna_categories["Quality Control"]}; do
   if [ "${rna_programs[$program]}" -eq 1 ]; then
-    echo "Aktueller Wert #####: $program"
 
     ## Trinity DeNovo / Genome Guided Assembly
-
     input_dir="${output_dir}/${program}_output/"
-
-    echo $input_dir
 
     case $MODE in
 
@@ -38,8 +34,10 @@ for program in ${rna_categories["Quality Control"]}; do
       ;;
 
     Guided)
-      echo "Trinity Genome-Guided Assembly Mode"
-      for file in "${input_dir}/"*fastq; do
+      echo "###Trinity Genome-Guided Assembly Mode###"
+      ./scripts/hisat_subscript.bash "$human_reference" "$file" "$output_dir"
+
+      for file in "${input_dir}/"*bam; do
         Trinity --genome_guided_bam $input_dir \
           --genome_guided_max_intron $max_intron \
           --max_memory $max_ram \

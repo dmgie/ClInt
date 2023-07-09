@@ -9,10 +9,10 @@ mkdir -p "$output_dir_minimap2"
 
 # Run minimap2
 
-for file in "${input_dir}/"*.fastq *fq; do
+for file in $input_dir/*.f*q*; do
 
   # Extract the filename without extension
-  base_name=$(basename "$file" .fq)
+  base_name=$(basename "$file" .fastq)
 
   $MINIMAP_PATH -a "$human_reference"\
                                   "$file" > \

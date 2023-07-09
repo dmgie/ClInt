@@ -84,7 +84,7 @@ export VCFUTILS_PATH=$(program_path vcfutils.pl)
 export SNPEFF_PATH=$(program_path snpeff.jar)
 export SNPEFF_CONFIG_PATH=$(program_path snpEff.config)
 export FASTP_PATH=$(program_path fastp)
-export MINIMAP_PATH=$(program_path minimap2)
+export MINIMAP_PATH=$(program_path minimap2/minimap2)
 
 # .... a lot more needed
 
@@ -130,6 +130,10 @@ declare -p rna_categories rna_categories_order rna_programs rna_programs_order >
 
 echo -e "----------------\e[1mRunning Workflow: \e[0m-------------------"
 
+# Execute FastQC by default
+#echo "Running FastQC (default)"
+#./scripts/FastQC_subscript.bash $INPUT_READS_PATH $OUTPUT_DIR
+
 # TODO: Comapre subscripts using lowercase to avoid capitlisation errors
 # Iterate through program list
 for program in "${!rna_programs[@]}"; do
@@ -142,7 +146,7 @@ for program in "${!rna_programs[@]}"; do
 
     # Only run program when arguments complete returns 0
     # Execute program subscript
-    echo "Running $program, $arguments"
+    printf "\n\n###Running $program###\nArguments: $arguments\n\n"
     if arguments_complete "${arguments_array[@]}"; then 
       ./scripts/${program}_subscript.bash $arguments
     else
@@ -153,7 +157,7 @@ done
 
 ## Delete temporary argument file
 rm temp_arguments.xml
-# rm temp_variables.sh
+rm temp_variables.sh
 
 
 ## TODO: Pause after FastQC, since we need to determine how much we want to trim, so we can ask whether to continue

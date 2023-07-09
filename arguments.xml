@@ -3,11 +3,6 @@
 <!-- TODO: Allow a global variable to check whether single or paired end reads -->
 <programs>
     <category type="Quality Control">
-        <program name="FastQC">
-            <description>A program for quality control of short reads.</description>
-            <arg>$INPUT_READS_PATH</arg>
-            <arg>$OUTPUT_DIR</arg>
-        </program>
         <program name="MultiQC">    
                 <description>A program that collects results from multiple quality control runs.</description>
         </program>
