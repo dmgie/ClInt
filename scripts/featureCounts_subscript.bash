@@ -10,18 +10,23 @@ OUTPUT_DIR=$5
 
 mkdir -p "${OUTPUT_DIR}/featureCounts_output"
 
-for bam_file in "$BAM_DIR"/*.bam; do
-  if [ -f "$bam_file" ]; then
+bam_files=$(find "$BAM_DIR" -name "*.bam" -type f -maxdepth 1 -printf "%p ")
 
-    output_file="${bam_file##*/}"
-    output_file="${output_file%.bam}_counts.txt"
+featureCounts -F GTF        \
+              -t $FEATURE   \
+              -g $ATTRIBUTE \
+              -T 4          \
+              -a "$GFF"     \
+              -o "$OUTPUT_DIR/featureCounts_output/counts.txt" \
+              $bam_files
 
-    featureCounts -F GTF        \
-                  -t $FEATURE   \
-                  -g $ATTRIBUTE \
-                  -T 4          \
-                  -a "$GFF"     \
-                  -o "$OUTPUT_DIR/featureCounts_output/$output_file" \
-                  "$bam_file"
-  fi
+# Generate DESeq2 metadata file
+metadata_file="${OUTPUT_DIR}/metadata.txt"
+echo -e "\condition\ttype" > "$metadata_file"
+
+sample_index=1
+for bam_file in $bam_files; do
+  sample_name=$(basename "$bam_file" .bam)
+  echo -e "$sample_name\ttreated\tsingle-read" >> "$metadata_file"
+  ((sample_index++))
 done
