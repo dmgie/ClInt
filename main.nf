@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 
 // Set up some params
 params.input_reads = file("${params.input_reads_path}/*.f*q.gz");
-params.output_path = file("./workflow_output"); // Default to subdir in current dir
+params.output_dir = file("./workflow_output"); // Default to subdir in current dir
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
 
@@ -19,6 +19,8 @@ ANNOTATION = file(params.gff_file); // Require as file() can't be empty
 // FIXME: Simplify ref_fai, ref_dict, and ref_genome to just be ref_files
 // FIXME: Tinity-GG output file should have some sort of identifier in the name,
 //        since it will be the same for all samples. Use sample name. This causes problems in VCF creation / publishDir
+// TODO: Enable setting read direction in nextflow.config (e.g F / R for unpaired or RF / FR for paired in Trinity)
+//       Each program (hisat, trinity) has their own settings depending on the input so this is a bit tricky
 
 def docker_current_dir() {
     // Simple function to return the docker command for the current process (as the PWD is different for each process)
@@ -39,8 +41,8 @@ def CHECKPARAMS() {
     println "Checking parameters..."
     if (params.input_reads_path == '') {
         error "ERROR: input_reads_path is not set"
-    } else if (params.output_path == '') {
-        error "ERROR: output_path is not set"
+    } else if (params.output_dir == '') {
+        error "ERROR: output_dir is not set"
     } else if (params.reference_file == '') {
         error "ERROR: reference_file is not set"
     } else if (params.gff_file == '') {
@@ -203,14 +205,21 @@ process TRINITY_DENOVO {
     input:
         path reads
     output:
-        path "Trinity.fasta"
+        path "Trinity*.fasta"
 
     script:
     def NUM_THREADS = 4
     """
     echo "Working on ${reads}"
-    echo "Trinity --seqType fq --max_memory 10G --left ${reads} --right ${reads} --CPU $NUM_THREADS --output Trinity.fasta"
-    touch Trinity.fasta
+    $docker trinityrnaseq/trinityrnaseq Trinity \
+    --seqType fq \
+    --max_memory 10G \
+    --single ${reads} \
+    --CPU $NUM_THREADS \
+    --output \$PWD/trinity/
+
+    #--left ${reads} --right ${reads} # If paired-ends
+    mv trinity/Trinity.fasta TrinityDeNovo_${sorted_aligned_bam}.fasta
     """
 }
 
@@ -220,7 +229,7 @@ process TRINITY_GUIDED {
         path sorted_aligned_bam
 
     output:
-        path "trinity/Trinity-GG*.fasta"
+        path "*Trinity-GG*.fasta"
 
 
     def docker = docker_current_dir()
@@ -236,8 +245,8 @@ process TRINITY_GUIDED {
     --max_memory 40G \
     --CPU $NUM_THREADS \
     --output \$PWD/trinity/
-    #samtools sort -@ $NUM_THREADS -o sorted_${sorted_aligned_bam} ${sorted_aligned_bam}
-    #touch Trinity_GG_${sorted_aligned_bam}.fasta
+
+    mv trinity/Trinity-GG.fasta Trinity-GG_${sorted_aligned_bam}.fasta
     """
         
 }
@@ -251,11 +260,34 @@ process RNASpades {
         path "transcripts.fasta"
 
     """
-    touch transcripts.fasta
+    spades.py --rna -ss-fr ${reads} -o spades_out
+    mv spades_out/transcripts.fasta transcripts_${reads.baseName}.fasta
     """
 }
 
+process MARK_DUPLICATES {
+    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
+    //       intead of just switching the flag for that read
+    maxForks 5
+    input:
+        path aligned_bam
+
+    output:
+        path "dedup_${aligned_bam}"
+
+    def docker = docker_current_dir()
+    script:
+    """
+    echo "Working on ${aligned_bam}"
+
+    ${docker} broadinstitute/gatk gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam}
+
+    """
+
+}
+
 process SplitNCigarReads {
+    // TODO: Change aligned_bam to dedup_bam, and change the output to dedup_${aligned_bam}, because we wanna remove duplicates first
     maxForks 8
     input:
         path aligned_bam
@@ -273,6 +305,7 @@ process SplitNCigarReads {
     def NUM_THREADS = 4
     """
     echo "Working on ${aligned_bam}"
+
     ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
 
     # ${docker} broadinstitute/gatk bash -c "cd \$PWD/; ls -lah ../../"
@@ -285,6 +318,7 @@ process SplitNCigarReads {
 
 process HaplotypeCaller {
     maxForks 8
+    publishDir "${params.output_dir}/haplotype_vcf/", mode: 'copy', overwrite: true
     input:
         path split_bam
         path ref_fai
@@ -313,8 +347,8 @@ process HaplotypeCaller {
 
 process QUALITYCONTROL {
     maxForks 5
-    // if (${PUBLISH_DIRECTORIES} == 1) {
-    //     publishDir "${params.output_path}/QC" // mode: 'copy',
+    // if ($PUBLISH_DIRECTORIES == 1) {
+    //     publishDir "${params.output_dir}/QC" // mode: 'copy',
     // }
     
     input:
@@ -341,9 +375,8 @@ process REFERENCE_HELP_FILES {
         path ref_file
 
     output:
-        path "${ref_file}.fai" // val used to allow for multiple consumption
-        path "${ref_file.baseName}.dict" // val used to allow for multiple consumption
-        // path "${ref_file.baseName}.dict" // val used to allow for multiple consumption
+        path "${ref_file}.fai" 
+        path "${ref_file.baseName}.dict" 
         // stdout emit: verbo
 
 
@@ -396,9 +429,29 @@ workflow ASSEMBLY {
         // (e.g. Trinity, RNASpades, etc.)
 
         // NOTE: For some reason placing Mapping outside oeach of those things, 
+
+        // TODO: Do we need to do BAM sorting here? Or can we just use BAM files straight?
+        // TODO: Maybe replace the "each" closure with a ".branch()" operator
+        //
+        // Channel
+        //     .from(params.assembly)
+        //     .branch {
+        //         trinity: "${it}" == "trinity"
+        //             trinity_mode = params.trinity_type.toLowerCase()
+        //             if ("${trinity_mode}" == "denovo") {
+        //                 return TRINITY_DENOVO(reads) // Returns the Trinity.fasta files
+        //                 // TRINITY_DENOVO.out.view()
+        //             } else if ("${trinity_mode}" == "guided") {
+        //                 return TRINITY_GUIDED(bam_files) // Returns the Trinity.fasta files
+        //                 // TRINITY_GUIDED.out.view()
+        //         rnaspades: "${it}" == "rnaspades"
+        //             return RNASpades(reads)
+        //     }.set { transcripts_fasta }
+        //
         params.assembly.each { method ->
-            
             method = method.toLowerCase()
+
+
             if ("${method}" == "trinity") {
                 trinity_mode = params.trinity_type.toLowerCase()
                 if ("${trinity_mode}" == "denovo") {
@@ -417,7 +470,8 @@ workflow ASSEMBLY {
             } else if ("${method}" == "rnaspades") {
                 // transcripts_fasta = RNASpades(reads)
                 // RNASpades.out.view()
-                MAPPING(REFERENCE, transcripts_fasta) // Will output bams
+                // Realign transcripts (fasta) to reference again
+                MAPPING(REFERENCE, transcripts_fasta)
             } else {
                 println "ERROR: Assembly method \"${method}\" not recognised"
             }
@@ -428,6 +482,7 @@ workflow ASSEMBLY {
 }
 
 workflow GATK {
+    // Run SplitNCigarReads and HaplotypeCaller
     take:
         bam
         ref_fai
@@ -447,8 +502,6 @@ workflow {
     CHECKPARAMS()
     READS = QUALITYCONTROL(Channel.fromPath(params.input_reads))
     
-
-
     REFERENCE_HELP_FILES(REFERENCE)
     (ref_fai, ref_dict) = REFERENCE_HELP_FILES.out
 
