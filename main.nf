@@ -11,6 +11,14 @@ ANNOTATION = file(params.gff_file); // Require as file() can't be empty
 // FIXME: GATK interacts weirdly with .fna files, as in it looks for
 //        fname.dict instead of fname.fna.dict, but it works with .fasta; but for ".fai" it looks for fname.fna.fai
 //        https://gatk.broadinstitute.org/hc/en-us/community/posts/9688967985691-Does-GATK4-BaseRecalibrator-not-understand-relative-paths-
+//        Possible workaround:
+//        1. Rename genome files to have .fasta extension when creating/reading (since this initial symlink is propogated)
+//        2. Check for the extensions during the Help_file creation, and then adjust the file names accordingly ({ref.baseName}.dict or {ref}.dict)
+//        3. TO CHECK: Maybe this happens with fasta as well --> look into it
+//        4. Use samtools dict to create the dict file
+// FIXME: Simplify ref_fai, ref_dict, and ref_genome to just be ref_files
+// FIXME: Tinity-GG output file should have some sort of identifier in the name,
+//        since it will be the same for all samples. Use sample name. This causes problems in VCF creation / publishDir
 
 def docker_current_dir() {
     // Simple function to return the docker command for the current process (as the PWD is different for each process)
@@ -248,7 +256,7 @@ process RNASpades {
 }
 
 process SplitNCigarReads {
-    maxForks 5
+    maxForks 8
     input:
         path aligned_bam
         path ref_fai
@@ -256,22 +264,18 @@ process SplitNCigarReads {
         path ref
 
     output:
-        // path "snc_${aligned_bam}"
-        stdout emit: temp
+        path "snc_${aligned_bam}"
+        // stdout emit: temp
     
     def docker = docker_current_dir()
 
     script:
     def NUM_THREADS = 4
     """
-    # Crappy workaround for GATK errors when using docker, seems fna trips up ".dict" file recognition
-    # https://gatk.broadinstitute.org/hc/en-us/community/posts/9688967985691-Does-GATK4-BaseRecalibrator-not-understand-relative-paths-
-    mv ${ref} ${ref.baseName}.fasta
-    mv ${ref_fai} ${ref.baseName}.fasta.fai
-
     echo "Working on ${aligned_bam}"
-    ${docker} broadinstitute/gatk bash -c "cd \$PWD/; ls -lah ../../"
-    ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref.baseName}.fasta -I \$PWD/${aligned_bam} -O snc_${aligned_bam}
+    ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
+
+    # ${docker} broadinstitute/gatk bash -c "cd \$PWD/; ls -lah ../../"
     # ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
     # echo "gatk SplitNCigarReads -R ${ref} -I ${aligned_bam} -O split_${aligned_bam}"
     # touch snc_${aligned_bam}
@@ -280,20 +284,27 @@ process SplitNCigarReads {
 }
 
 process HaplotypeCaller {
-    maxForks 5
+    maxForks 8
     input:
         path split_bam
-        path ref_items
+        path ref_fai
+        path ref_dict
+        path ref
 
     output:
         path "haplotype_*.vcf"
+
+    def docker = docker_current_dir()
 
     script:
     def NUM_THREADS = 4
     """
     echo "Working on ${split_bam}"
-    echo "gatk HaplotypeCaller -R ref_genome.fasta -I ${split_bam} -O haplotype_${split_bam}"
-    touch haplotype_${split_bam.simpleName}.vcf
+    $docker broadinstitute/gatk gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
+    --pair-hmm-implementation FASTEST_AVAILABLE \
+    --smith-waterman FASTEST_AVAILABLE \
+    -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/haplotype_${split_bam}.vcf
+    #touch haplotype_${split_bam.simpleName}.vcf
     ls -lah
     """
 }
@@ -341,7 +352,7 @@ process REFERENCE_HELP_FILES {
     """
     echo "Running samtools faidx and docker"
     samtools faidx ${ref_file}
-    ${docker} broadinstitute/gatk gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file}.dict
+    ${docker} broadinstitute/gatk gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file.baseName}.dict
     #${docker} broadinstitute/gatk gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file}.dict
     ls -lah
     """
@@ -425,10 +436,10 @@ workflow GATK {
     main:
         split_bam = SplitNCigarReads(bam, ref_fai, ref_dict, ref)
         SplitNCigarReads.out.view()
-        // haplotype_vcf = HaplotypeCaller(split_bam, ref_help_files)
+        haplotype_vcf = HaplotypeCaller(split_bam, ref_fai, ref_dict, ref)
     emit:
-        split_bam
-        // haplotype_vcf
+        // split_bam
+        haplotype_vcf
 }
 
 
