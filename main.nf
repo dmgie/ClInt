@@ -7,7 +7,6 @@ params.output_dir = file("./workflow_output"); // Default to subdir in current d
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
 
-// FIXME: Replace "ref_genome" with variables instead
 // FIXME: GATK interacts weirdly with .fna files, as in it looks for
 //        fname.dict instead of fname.fna.dict, but it works with .fasta; but for ".fai" it looks for fname.fna.fai
 //        https://gatk.broadinstitute.org/hc/en-us/community/posts/9688967985691-Does-GATK4-BaseRecalibrator-not-understand-relative-paths-
@@ -16,7 +15,7 @@ ANNOTATION = file(params.gff_file); // Require as file() can't be empty
 //        2. Check for the extensions during the Help_file creation, and then adjust the file names accordingly ({ref.baseName}.dict or {ref}.dict)
 //        3. TO CHECK: Maybe this happens with fasta as well --> look into it
 //        4. Use samtools dict to create the dict file
-// FIXME: Simplify ref_fai, ref_dict, and ref_genome to just be ref_files
+// FIXME: Simplify ref_fai, ref_dict, and ref_genome to just be ref_files?
 // FIXME: Tinity-GG output file should have some sort of identifier in the name,
 //        since it will be the same for all samples. Use sample name. This causes problems in VCF creation / publishDir
 // TODO: Enable setting read direction in nextflow.config (e.g F / R for unpaired or RF / FR for paired in Trinity)
@@ -230,6 +229,7 @@ process TRINITY_GUIDED {
 
     output:
         path "*Trinity-GG*.fasta"
+        // path "Trinity-GG_${sorted_aligned_bam}.fasta"
 
 
     def docker = docker_current_dir()
@@ -257,15 +257,15 @@ process RNASpades {
         path reads
 
     output:
-        path "transcripts.fasta"
+        path "rnaspades_${reads.baseName}.fasta"
 
     """
     spades.py --rna -ss-fr ${reads} -o spades_out
-    mv spades_out/transcripts.fasta transcripts_${reads.baseName}.fasta
+    mv spades_out/transcripts.fasta rnaspades_${reads.baseName}.fasta
     """
 }
 
-process MARK_DUPLICATES {
+process MarkDuplicates {
     // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
     //       intead of just switching the flag for that read
     maxForks 5
@@ -276,14 +276,12 @@ process MARK_DUPLICATES {
         path "dedup_${aligned_bam}"
 
     def docker = docker_current_dir()
+
     script:
     """
     echo "Working on ${aligned_bam}"
-
-    ${docker} broadinstitute/gatk gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam}
-
+    ${docker} broadinstitute/gatk gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
     """
-
 }
 
 process SplitNCigarReads {
@@ -334,6 +332,7 @@ process HaplotypeCaller {
     def NUM_THREADS = 4
     """
     echo "Working on ${split_bam}"
+    samtools index ${split_bam}
     $docker broadinstitute/gatk gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
     --pair-hmm-implementation FASTEST_AVAILABLE \
     --smith-waterman FASTEST_AVAILABLE \
@@ -431,23 +430,6 @@ workflow ASSEMBLY {
         // NOTE: For some reason placing Mapping outside oeach of those things, 
 
         // TODO: Do we need to do BAM sorting here? Or can we just use BAM files straight?
-        // TODO: Maybe replace the "each" closure with a ".branch()" operator
-        //
-        // Channel
-        //     .from(params.assembly)
-        //     .branch {
-        //         trinity: "${it}" == "trinity"
-        //             trinity_mode = params.trinity_type.toLowerCase()
-        //             if ("${trinity_mode}" == "denovo") {
-        //                 return TRINITY_DENOVO(reads) // Returns the Trinity.fasta files
-        //                 // TRINITY_DENOVO.out.view()
-        //             } else if ("${trinity_mode}" == "guided") {
-        //                 return TRINITY_GUIDED(bam_files) // Returns the Trinity.fasta files
-        //                 // TRINITY_GUIDED.out.view()
-        //         rnaspades: "${it}" == "rnaspades"
-        //             return RNASpades(reads)
-        //     }.set { transcripts_fasta }
-        //
         params.assembly.each { method ->
             method = method.toLowerCase()
 
@@ -471,7 +453,7 @@ workflow ASSEMBLY {
                 // transcripts_fasta = RNASpades(reads)
                 // RNASpades.out.view()
                 // Realign transcripts (fasta) to reference again
-                MAPPING(REFERENCE, transcripts_fasta)
+                // MAPPING(REFERENCE, transcripts_fasta)
             } else {
                 println "ERROR: Assembly method \"${method}\" not recognised"
             }
@@ -489,8 +471,8 @@ workflow GATK {
         ref_dict
         ref
     main:
-        split_bam = SplitNCigarReads(bam, ref_fai, ref_dict, ref)
-        SplitNCigarReads.out.view()
+        split_bam = SplitNCigarReads(bam, ref_fai, ref_dict, ref) | MarkDuplicates
+        // SplitNCigarReads.out.view()
         haplotype_vcf = HaplotypeCaller(split_bam, ref_fai, ref_dict, ref)
     emit:
         // split_bam
