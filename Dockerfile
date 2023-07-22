@@ -67,29 +67,18 @@ RUN cpanm install URI::Escape
 
 
 ## set up tool config and deployment area:
-
 ENV SRC /usr/local/src
 ENV BIN /usr/local/bin
 
-
 #####
 # Install R
-
 WORKDIR $SRC
-#####
-# Install R
-
-WORKDIR $SRC
-
 RUN apt-get install -y texlive texlive-latex-extra
-
 ENV R_VERSION=R-4.2.0
-
 RUN curl https://cran.r-project.org/src/base/R-4/$R_VERSION.tar.gz -o $R_VERSION.tar.gz && \
     tar xvf $R_VERSION.tar.gz && \
     cd $R_VERSION && \
 	./configure && make && make install
-
 RUN R -e 'install.packages("BiocManager", repos="http://cran.us.r-project.org")'
 RUN R -e 'BiocManager::install("tidyverse")'
 RUN R -e 'BiocManager::install("edgeR")'
