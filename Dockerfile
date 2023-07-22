@@ -180,7 +180,7 @@ RUN wget https://sourceforge.net/projects/bowtie-bio/files/bowtie2/${BOWTIE2_VER
     rm -r bowtie2-${BOWTIE2_VERSION}-linux-x86_64
 
 ## Samtools
-ENV SAMTOOLS_VERSION 1.13
+ENV SAMTOOLS_VERSION 1.17
 RUN wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
     tar xvf samtools-${SAMTOOLS_VERSION}.tar.bz2 && \
     cd samtools-${SAMTOOLS_VERSION} && \
@@ -195,7 +195,7 @@ RUN wget https://github.com/gmarcais/Jellyfish/releases/download/v${JELLYFISH_VE
     ./configure && make && make install
 
 ## FeatureCounts
-ENV SUBREAD_VERSION 2.0.2
+ENV SUBREAD_VERSION 2.0.6
 RUN wget https://sourceforge.net/projects/subread/files/subread-${SUBREAD_VERSION}/subread-${SUBREAD_VERSION}-Linux-x86_64.tar.gz/download -O subread-${SUBREAD_VERSION}-Linux-x86_64.tar.gz && \
     tar xvf subread-${SUBREAD_VERSION}-Linux-x86_64.tar.gz && \
     cp -r subread-${SUBREAD_VERSION}-Linux-x86_64/bin/* $BIN/
