@@ -1,5 +1,8 @@
+#### THIS DOCKERFILE HAS BEEN ADAPTER FROM TRINITYRNASEQ/TRINITYRNASEQ DOCKER FILE
+#### All credit goes to TrinityRNASEQ/TrinityRNASEQ / brianjohnhaas @ github.com/trinityrnaseq/trinityrnaseq
+
 FROM ubuntu:20.04
-MAINTAINER bhaas@broadinstitute.org
+MAINTAINER clint@uni-tuebingen.de
 
 ENV DEBIAN_FRONTEND=noninteractive
 
