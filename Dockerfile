@@ -111,6 +111,22 @@ RUN pip3 install numpy
 RUN pip3 install git+https://github.com/ewels/MultiQC.git
 RUN pip3 install HTSeq
 
+############################# SOFTWARE INSTALLATION #############################
+
+## Fastp
+WORKDIR $SRC
+RUN wget http://opengene.org/fastp/fastp && \
+    chmod a+x ./fastp && \
+    mv ./fastp $BIN
+
+## RNASpades
+WORKDIR $SRC
+RUN wget http://cab.spbu.ru/files/release3.15.5/SPAdes-3.15.5-Linux.tar.gz && \
+    tar -xzf SPAdes-3.15.5-Linux.tar.gz && \
+    cd SPAdes-3.15.5-Linux/bin/ && \
+    cp * $BIN && \
+    cd ../../ && rm -r SPAdes-3.15.5-Linux
+
 
 ## bowtie
 WORKDIR $SRC
