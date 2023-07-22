@@ -97,13 +97,13 @@ RUN R -e 'BiocManager::install("fastcluster")'
 RUN R -e 'BiocManager::install("DEXSeq")'
 RUN R -e 'BiocManager::install("tximport")'
 RUN R -e 'BiocManager::install("tximportData")'
-
+RUN R -e 'install.packages("ggplot2", repos="https://cloud.r-project.org")'
 
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
-RUN apt-get install -y cython3
 
 ## Python 3 stuff
+RUN apt-get install -y cython3
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 ## some python modules
