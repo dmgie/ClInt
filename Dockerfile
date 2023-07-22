@@ -52,6 +52,13 @@ RUN apt-get -qq update && apt-get -qq -y install \
     wget \
     x11-common \
     zlib1g-dev
+    zlib1g-dev \
+    openjdk-17-jdk \
+    openjdk-17-demo \
+    openjdk-17-doc \
+    openjdk-17-jre-headless \
+    openjdk-17-source \
+    autoconf
 
 
 ## Perl stuff
