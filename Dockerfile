@@ -230,10 +230,11 @@ ENV PICARD_HOME $SRC
 ####
 ## GATK4 installation
 WORKDIR $SRC
-ENV GATK_VERSION=4.2.1.0
+# ENV GATK_VERSION=4.2.1.0
+ENV GATK_VERSION=4.4.0.0    
 RUN wget https://github.com/broadinstitute/gatk/releases/download/${GATK_VERSION}/gatk-${GATK_VERSION}.zip && \
-    unzip gatk-${GATK_VERSION}.zip
-
+    unzip gatk-${GATK_VERSION}.zip && \
+    ln -s $SRC/gatk-${GATK_VERSION}/gatk $BIN/.
 ENV GATK_HOME $SRC/gatk-${GATK_VERSION}
 
 
