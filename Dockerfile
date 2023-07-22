@@ -124,11 +124,13 @@ RUN wget http://opengene.org/fastp/fastp && \
 
 ## RNASpades
 WORKDIR $SRC
-RUN wget http://cab.spbu.ru/files/release3.15.5/SPAdes-3.15.5-Linux.tar.gz && \
-    tar -xzf SPAdes-3.15.5-Linux.tar.gz && \
-    cd SPAdes-3.15.5-Linux/bin/ && \
-    cp * $BIN && \
-    cd ../../ && rm -r SPAdes-3.15.5-Linux
+ENV SPADES_VERSION 3.15.5
+RUN wget http://cab.spbu.ru/files/release${SPADES_VERSION}/SPAdes-${SPADES_VERSION}-Linux.tar.gz && \
+    tar -xzf SPAdes-${SPADES_VERSION}-Linux.tar.gz && \
+    ln -s $SRC/SPAdes-${SPADES_VERSION}-Linux/bin/spades.py $BIN/.
+#    cd ../../
+#    cd SPAdes-${SPADES_VERSION}-Linux/bin/ && \
+#    rm -r SPAdes-3.15.5-Linux
 
 
 ## bowtie
