@@ -51,7 +51,6 @@ RUN apt-get -qq update && apt-get -qq -y install \
     unzip \
     wget \
     x11-common \
-    zlib1g-dev
     zlib1g-dev \
     openjdk-17-jdk \
     openjdk-17-demo \
