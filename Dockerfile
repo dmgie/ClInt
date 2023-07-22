@@ -288,6 +288,8 @@ RUN apt-get -qq -y remove git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /var/log/dpkg.log
 
+
+
 ################################################
 ## be sure this is last!
-COPY Dockerfile $SRC/Dockerfile.$TRINITY_VERSION
+# COPY ./Dockerfile $SRC/Dockerfile.$TRINITY_VERSION
