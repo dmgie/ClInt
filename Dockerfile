@@ -238,11 +238,12 @@ ENV GATK_HOME $SRC/gatk-${GATK_VERSION}
 
 
 ## STAR
-ENV STAR_VERSION=2.7.8a
-RUN STAR_URL="https://github.com/alexdobin/STAR/archive/${STAR_VERSION}.tar.gz" &&\
-    wget -P $SRC $STAR_URL &&\
+# was 2.7.8a
+ENV STAR_VERSION=2.7.10b
+RUN STAR_URL="https://github.com/alexdobin/STAR/archive/${STAR_VERSION}.tar.gz" && \
+        wget -P $SRC $STAR_URL && \
         tar -xvf $SRC/${STAR_VERSION}.tar.gz -C $SRC && \
-            mv $SRC/STAR-${STAR_VERSION}/bin/Linux_x86_64_static/STAR /usr/local/bin
+        mv $SRC/STAR-${STAR_VERSION}/bin/Linux_x86_64_static/STAR $BIN
 
 
 
