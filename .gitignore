@@ -1,4 +1,5 @@
 /.nextflow
 /work
-/.nextflow.log
+/.nextflow.log/*
 /clint.sif
+/workflow_output
