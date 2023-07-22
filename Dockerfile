@@ -205,15 +205,18 @@ RUN wget https://cloud.biohpc.swmed.edu/index.php/s/oTtGWbWjaxsQ2Ho/download -O 
     unzip hisat2-2.2.1-Linux_x86_64.zip && \
     cp hisat2-2.2.1/hisat2* $BIN/
 
-## GMAP
-ENV GSNAP_VER 2021-07-23
-WORKDIR $SRC
-RUN GMAP_URL="http://research-pub.gene.com/gmap/src/gmap-gsnap-$GSNAP_VER.tar.gz" && \
-    wget $GMAP_URL && \
-    tar xvf gmap-gsnap-$GSNAP_VER.tar.gz && \
-    cd gmap-$GSNAP_VER && ./configure --prefix=`pwd` && make && make install && \
-    cp bin/* $BIN/
 
+# Not using GMAP in our pipeline, and it takes a long time to install
+# Instead we use other aligners
+# ## GMAP
+# ENV GSNAP_VER 2021-07-23
+# WORKDIR $SRC
+# RUN GMAP_URL="http://research-pub.gene.com/gmap/src/gmap-gsnap-$GSNAP_VER.tar.gz" && \
+#     wget $GMAP_URL && \
+#     tar xvf gmap-gsnap-$GSNAP_VER.tar.gz && \
+#     cd gmap-$GSNAP_VER && ./configure --prefix=`pwd` && make && make install && \
+#     cp bin/* $BIN/
+#
 
 # blat
 RUN wget http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/blat/blat -P $BIN && \
