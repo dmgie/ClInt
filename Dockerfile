@@ -262,10 +262,29 @@ ENV TRINITY_CO=8f0c44bccc321170b0994b2196f5be27f9c49b10
 # ENV TRINITY_CO=12e47979162b4ca2dec5231c7ffde0a42a01ad71
 
 WORKDIR $SRC
+#
+# RUN git clone --recursive https://github.com/trinityrnaseq/trinityrnaseq.git && \
+#     cd trinityrnaseq && \
+#     git checkout ${TRINITY_CO} && \
+#     git submodule init && git submodule update && \
+#     git submodule foreach --recursive git submodule init && \
+#     git submodule foreach --recursive git submodule update && \
+#     rm -rf ./trinity_ext_sample_data && \
+#     make && make plugins && \
+#     make install && \
+#     cd ../ && rm -r trinityrnaseq
+#
 
+# add branch = devel to bamsifter submodule - fixed htslib compilation errors
+	#sed -i -E 's/(.*bamsifter.git)/\1\n\tbranch = devel/g' ./.gitmodules && \
+    	#git submodule update --remote && \
+    	#cd trinity-plugins/bamsifter && sed -i 's/^#\(.*\)/\1/' ./build_htslib.sh && cd ../../ \
 RUN git clone --recursive https://github.com/trinityrnaseq/trinityrnaseq.git && \
     cd trinityrnaseq && \
     git checkout ${TRINITY_CO} && \
+    sed -i -E 's/(.*bamsifter.git)/\1\n\tbranch = devel/g' ./.gitmodules && \
+    git submodule update --remote && \
+    cd trinity-plugins/bamsifter && sed -i 's/^#\(.*\)/\1/' ./build_htslib.sh && cd ../../ \
     git submodule init && git submodule update && \
     git submodule foreach --recursive git submodule init && \
     git submodule foreach --recursive git submodule update && \
