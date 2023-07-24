@@ -260,6 +260,27 @@ RUN wget https://github.com/COMBINE-lab/salmon/releases/download/v${SALMON_VERSI
     tar xvf Salmon-${SALMON_VERSION}_linux_x86_64.tar.gz && \
     ln -s $SRC/salmon-${SALMON_VERSION}_linux_x86_64/bin/salmon $BIN/.
 
+## Gradle (for building MUSIAL)
+WORKDIR $SRC
+ENV GRADLE_VERSION=8.2.1
+RUN wget https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip && \
+    unzip gradle-${GRADLE_VERSION}-bin.zip && \
+    ln -s $SRC/gradle-${GRADLE_VERSION}/bin/gradle $BIN/.
+
+## MUSIAL
+# WORKDIR $SRC
+# ENV MUSIAL_VERSION=2.1
+# RUN git clone https://github.com/Integrative-Transcriptomics/MUSIAL.git && \
+#     cd MUSIAL && \
+#     git checkout v${MUSICAL_VERSION} && \
+#     gradle clean build && \
+#     ln -s $SRC/MUSIAL/build/libs/MUSIAL-${MUSICAL_VERSION}.jar $BIN/.
+# Alternatively
+WORKDIR $SRC
+ENV MUSIAL_VERSION=2.1
+RUN wget https://github.com/Integrative-Transcriptomics/MUSIAL/releases/download/v2.1/MUSIAL-v2.1.jar && \
+    ln -s $SRC/MUSIAL-v${MUSIAL_VERSION}.jar $BIN/.
+
 
 ## Trinity
 WORKDIR $SRC
