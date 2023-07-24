@@ -9,11 +9,6 @@ nextflow.enable.dsl=2
 include { MAPPING as REMAPPING } from './mapping.nf'
 include { MAPPING as REMAPPING2 } from './mapping.nf'
 
-def docker_current_dir() {
-    REF_FULLPATH = "realpath ${params.reference_file}".execute().text.trim()
-    "docker run -v $PWD:$PWD -v \$PWD:\$PWD -v ${REF_FULLPATH}:${REF_FULLPATH} --user ${params.USER_ID}:${params.GROUP_ID}"
-}
-
 process TRINITY_DENOVO {
     maxForks 6
     input:
@@ -25,7 +20,7 @@ process TRINITY_DENOVO {
     def NUM_THREADS = 4
     """
     echo "Working on ${reads}"
-    $docker trinityrnaseq/trinityrnaseq Trinity \
+    Trinity \
     --seqType fq \
     --max_memory 10G \
     --single ${reads} \
@@ -52,14 +47,13 @@ process TRINITY_GUIDED {
         // path "*Trinity-GG*.fasta"
 
 
-    def docker = docker_current_dir()
 
     script:
     def NUM_THREADS = 4
     def max_intron = 10000
     """ 
     ls -lah
-    $docker trinityrnaseq/trinityrnaseq Trinity \
+    Trinity \
     --genome_guided_bam \$PWD/$sorted_aligned_bam \
     --genome_guided_max_intron ${max_intron} \
     --max_memory 40G \
