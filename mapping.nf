@@ -8,11 +8,6 @@ process SAMTOOLS_SORT {
 
     script:
 
-    // NOTE: If we want certain version-specific samtools features, we can do
-    // do a version check by i.e running `samtools --version` and parsing the output
-    // then comparing it to the version we want. 
-    // Easiest way is add them to a list, sort them lexically and then compare the first element
-    // to the version we want. If it's >=, then we can use the new features, otherwise we can't.
     """
     echo "Sorting ${sam_file}"
     samtools sort -@ ${task.cpus} -o ${sam_file.simpleName}.bam ${sam_file}
