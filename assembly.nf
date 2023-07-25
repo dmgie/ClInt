@@ -17,14 +17,13 @@ process TRINITY_DENOVO {
         path "Trinity*.fasta"
 
     script:
-    def NUM_THREADS = 4
     """
     echo "Working on ${reads}"
     Trinity \
     --seqType fq \
     --max_memory 10G \
     --single ${reads} \
-    --CPU $NUM_THREADS \
+    --CPU ${task.cpus} \
     --output \$PWD/trinity/
 
     #--left ${reads} --right ${reads} # If paired-ends
@@ -49,7 +48,6 @@ process TRINITY_GUIDED {
 
 
     script:
-    def NUM_THREADS = 4
     def max_intron = 10000
     """ 
     ls -lah
@@ -57,7 +55,7 @@ process TRINITY_GUIDED {
     --genome_guided_bam \$PWD/$sorted_aligned_bam \
     --genome_guided_max_intron ${max_intron} \
     --max_memory 40G \
-    --CPU $NUM_THREADS \
+    --CPU ${task.cpus} \
     --output \$PWD/trinity/
 
     mv trinity/Trinity-GG.fasta Trinity-GG_${sorted_aligned_bam}.fasta
@@ -78,9 +76,7 @@ process RNASpades {
         path "rnaspades_${reads.baseName}.fasta"
 
     script:
-    def NUM_THREADS = 4
     """
-    spades.py --rna -t ${NUM_THREADS} -s ${reads} -o spades_out
     mv spades_out/transcripts.fasta rnaspades_${reads.baseName}.fasta
     """
 

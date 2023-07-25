@@ -37,7 +37,6 @@ process SplitNCigarReads {
     
 
     script:
-    def NUM_THREADS = 4
     """
     echo "Working on ${aligned_bam}"
 
@@ -72,7 +71,6 @@ process HaplotypeCaller {
 
 
     script:
-    def NUM_THREADS = 4
     """
     echo "Working on ${split_bam}"
     samtools index ${split_bam}

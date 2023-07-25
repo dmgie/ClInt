@@ -7,7 +7,6 @@ process SAMTOOLS_SORT {
         path "*.bam"
 
     script:
-    def NUM_THREADS = 4
 
     // NOTE: If we want certain version-specific samtools features, we can do
     // do a version check by i.e running `samtools --version` and parsing the output
@@ -16,7 +15,7 @@ process SAMTOOLS_SORT {
     // to the version we want. If it's >=, then we can use the new features, otherwise we can't.
     """
     echo "Sorting ${sam_file}"
-    samtools sort -@ $NUM_THREADS -o ${sam_file.simpleName}.bam ${sam_file}
+    samtools sort -@ ${task.cpus} -o ${sam_file.simpleName}.bam ${sam_file}
     """
 
     stub:
@@ -33,11 +32,10 @@ process HISAT_BUILD {
         path "ref_idx*.ht2"
 
     script:
-    def NUM_THREADS = 4
     def index_name = "ref_idx"
     """
     echo "Running hisat2-build"
-    hisat2-build -p $NUM_THREADS  ${ref_file} ${index_name}
+    hisat2-build -p ${task.cpus}  ${ref_file} ${index_name}
     # touch ref_idx.1.ht2
     # touch ref_idx.2.ht2
     # touch ref_idx.3.ht2
@@ -63,7 +61,6 @@ process HISAT2 {
 
     script:
     def aligned_fname = "${reads.simpleName}"
-    def NUM_THREADS = 4
     def index_name = "ref_idx"
     def extension = "${reads.extension}"
 
@@ -71,12 +68,12 @@ process HISAT2 {
     if (extension == 'fasta') {
         """
         echo "Fasta file detected"
-        hisat2 -f -p $NUM_THREADS --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        hisat2 -f -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
         """
     } else {
         """
         echo "Fastq file detected"
-        hisat2 -p $NUM_THREADS --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        hisat2 -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
         """
     }
 
@@ -97,14 +94,13 @@ process STAR_BUILD {
         path "*"
 
     script:
-    def NUM_THREADS = 4
     def READ_LENGTH = 100
     def feature = "gene"
     def extension = annotation.extension
     if (extension == 'gtf') {
         """
             echo "GTF file detected"
-            echo "STAR --runThreadN $NUM_THREADS \
+            echo "STAR --runThreadN ${task.cpus} \
             --runMode genomeGenerate \
             --genomeDir . \
             --genomeFastaFiles $ref_file \
@@ -114,7 +110,7 @@ process STAR_BUILD {
     } else {
         """
             echo "GFF file detected"
-            echo "STAR --runThreadN $NUM_THREADS \
+            echo "STAR --runThreadN ${task.cpus} \
             --runMode genomeGenerate \
             --genomeDir . \
             --genomeFastaFiles $ref_file \
@@ -141,11 +137,10 @@ process STAR {
         path "aligned_*.bam"
 
     script:
-    def NUM_THREADS = 4
     def SAM_HEADER = "@RG\tID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
     """
     echo "Working on ${reads}"
-    echo "STAR --runThreadN $NUM_THREADS \
+    echo "STAR --runThreadN ${task.cpus} \
     --genomeDir ${ref_idx} \
     --readFilesIn ${reads} \
     --readFilesCommand zcat \
