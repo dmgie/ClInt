@@ -68,12 +68,17 @@ process HISAT2 {
     if (extension == 'fasta') {
         """
         echo "Fasta file detected"
-        hisat2 -f -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        hisat2 -f -p ${task.cpus} \
+        --new-summary --summary-file ${aligned_fname}_summary.txt \
+        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
+        -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
         """
     } else {
         """
         echo "Fastq file detected"
-        hisat2 -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        hisat2 -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt \
+        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
+        -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
         """
     }
 
@@ -81,7 +86,7 @@ process HISAT2 {
     def aligned_fname = "${reads.simpleName}"
     """
     touch ${aligned_fname}.sam
-    touch ${aligned_fname}.txt
+    touch ${aligned_fname}_summary.txt
     """
 }
 
