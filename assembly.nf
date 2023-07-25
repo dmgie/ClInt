@@ -1,13 +1,6 @@
 nextflow.enable.dsl=2
-// include { docker_current_dir } from "./shared.nf"
 
-// FIXME: Avoid needing to import the same thing twice with alias
-//        (i.e. REMAPPING and REMAPPING2) because of Nextflow's process name
-//        uniqueness requirement
-//        This affects the part where if there are multiple assembly methods,
-//        we need to realign the transcripts to the reference again.
 include { MAPPING as REMAPPING } from './mapping.nf'
-include { MAPPING as REMAPPING2 } from './mapping.nf'
 
 process TRINITY_DENOVO {
     maxForks 6
