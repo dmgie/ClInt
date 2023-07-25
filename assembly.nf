@@ -77,6 +77,7 @@ process RNASpades {
 
     script:
     """
+    spades.py --rna -t ${task.cpus} -s ${reads} -o spades_out
     mv spades_out/transcripts.fasta rnaspades_${reads.baseName}.fasta
     """
 
