@@ -18,7 +18,7 @@ def docker_current_dir() {
 
 def CHECKPARAMS() {
     println "Checking parameters..."
-    if (params.input_reads_path == '') {
+    if (params.input_dir == '') {
         error "ERROR: input_reads_path is not set"
     } else if (params.output_dir == '') {
         error "ERROR: output_dir is not set"
