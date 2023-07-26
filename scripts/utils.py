@@ -1,34 +1,12 @@
 import os
 import pysam
+import subprocess
 
-def extract_attribute(input_string, query):
-    start = input_string.find(query)
-    if start == -1:
-        return None
-
-    start += len("Name=")
-    end = input_string.find(";", start)
-    if end == -1:
-        return None
-
-    return input_string[start:end]
-
-def create_gff(gff_file_new, header_lines, extracted_lines):
-    with open(gff_file_new, 'w') as f:
-        # Schreibe die Header-Zeilen in die Datei
-        for header_line in header_lines:
-            f.write(f"{header_line[0]}\n")
-        
-        # Schreibe die Inhaltszeilen in die Datei
-        for line in extracted_lines:
-            gff_line = "\t".join(line)
-            f.write(f"{gff_line}\n")
-
-def read_vcf_file(types):
+def read_vcf_file(directories):
     variants_dict = {}
 
-    for type in types:
-        directory = os.fsencode(types[type])
+    for type in directories:
+        directory = os.fsencode(directories[type])
         for file in os.listdir(directory):
             filename = os.fsencode(file).decode()
             if filename.endswith(".vcf"):
@@ -38,12 +16,6 @@ def read_vcf_file(types):
                         pos = record.pos
                         ref = record.ref
                         alt = ",".join(map(str, record.alts))
-                        qual = record.qual
-                        filter_status = record.filter
-                        info = record.info
-                        sample_info = record.samples
-
-                        # print_variants(chrom, pos, ref, alt, qual, filter_status, info, sample_info)
                         
                         if pos in variants_dict:
                             if type in variants_dict[pos]:
@@ -81,18 +53,25 @@ def get_gff_header(gff_file):
                header_lines.append(line.strip().split("\t"))
     return header_lines
 
-def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lines):
+def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lines, max_extend=100):
+    """Search for occurences of variant position in genomic annotation
+       -> Extract .gff lines from original
+       -> 1st iteration: look for direct matches
+       -> n'th iteration. recursively search for matches in extended search
+    """
     with open(gff_file, 'r+') as infile:
         for line in infile:
             if not line.startswith('#'):
                 fields = line.strip().split('\t')
                 if len(fields) >= 5: 
                     chr_name, source, feature_type, start, end, *_ = fields
-                    if feature_type == feature:
-                        if chr_name == str(chromosome): 
-                            start_pos, end_pos = int(start), int(end)
-                            if (start_pos - extend) <= position <= (end_pos + extend):
-                                extracted_lines.append(line.strip())
+                    if extend < max_extend:
+                        if feature_type == feature:
+                            if chr_name == str(chromosome): 
+                                start_pos, end_pos = int(start), int(end)
+                                if (start_pos - extend) <= position <= (end_pos + extend):
+                                    extracted_lines.append(line.strip())
+                    
                                 
         if not extracted_lines:
             extend += 10
@@ -100,3 +79,80 @@ def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lin
             
     print(f"Result found at extension {extend}")                                                
     return extracted_lines
+
+def create_gff(gff_file, header_lines, extracted_lines):
+    """Create new GFF file of extracted lines
+    
+    Keyword arguments:
+    @gff_file        -- new .gff file name
+    @header_lines    -- all header lines from original .gff
+    @extracted_lines -- extracted .gff lines
+    """
+    with open(gff_file, 'w') as f:
+        for header_line in header_lines:
+            f.write(f"{header_line[0]}\n")
+        
+        for line in extracted_lines:
+            gff_line = "\t".join(line)
+            f.write(f"{gff_line}\n")
+
+def extract_attribute(input_string, query):
+    """Extracts strings from GFF attribute column (9)
+
+    Keyword arguments:
+    @input_string -- attribute string
+    @query        -- query term, i.e. "Name="
+    """
+    start = input_string.find(query)
+    if start == -1:
+        return None
+
+    start += len(query)
+    end = input_string.find(";", start)
+    if end == -1:
+        return None
+
+    return input_string[start:end]
+
+def run_featurecounts(input_bam, annotation_gtf, output_counts_file, feature):
+    """Run featureCounts as shell subprocess
+    """
+    cmd = f"featureCounts -a {annotation_gtf} -o {output_counts_file} -t {feature} -g {'locus_tag'} {input_bam}"
+
+    try:
+        subprocess.run(cmd, check=True, shell=True)
+    except subprocess.CalledProcessError as e:
+        print(e)
+
+def get_expression_count(fc_file, gene_id, filename):
+    expression_count = None
+    with open(fc_file, "r") as file:
+        lines = file.readlines()
+        header = lines[1].strip().split("\t")
+        index_geneid = header.index("Geneid")
+        index_filename = header.index(filename)
+        
+        for line in lines[1:]:
+            data = line.strip().split("\t")
+            if data[index_geneid] == gene_id:
+                expression_count = int(data[index_filename])
+                break
+    
+    return expression_count
+
+def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
+    """Removes substrings to trim fileendinding from .vcf files
+
+    Keyword arguments:
+    @filename  -- input string
+    @prefix    -- string prefix, default: "haplotype_"
+    @sufffix   -- string sufffix, default: ".vcf"
+    """
+    
+    filename = filename.replace(prefix, "")
+    filename = filename.replace(suffix, "")
+    return filename
+
+
+
+## check the expression in files with differente allele
