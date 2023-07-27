@@ -22,7 +22,6 @@ if __name__ == "__main__":
     gff_lines=[]
     variants = read_vcf_file(dir_dict)
     extracted_lines=[]
-    matches=[]
     matches_count = 0
     total_count = 0
 
@@ -40,17 +39,22 @@ if __name__ == "__main__":
                 gff_lines.append(extracted_lines)
                 for line in extracted_lines:
                     values = line.split('\t')
-                    gene_name = extract_attribute(values[8], 'Name=')
-                    gene_id = extract_attribute(values[8], 'ID=')
-                    start=values[3]
-                    end=values[4]
+                    variant_line = {
+                        "out": {
+                            "gene_id":   extract_attribute(values[8], 'ID='),
+                            "gene_name": extract_attribute(values[8], 'Name='),
+                            "start":     values[3],
+                            "end":       values[4],
+                            "var_pos":   variant,
+                            "ref":       variants[variant]["ref"],
+                            "dna_alt":   variants[variant]["dna"],
+                            "rna_alt":   variants[variant]["rna"]
+                        },
+                        "files": variants[variant]["hits"]
+                    }
 
-                    output_line.append({"out":[gene_id, gene_name, start, end, variant, variants[variant]["ref"], variants[variant]["dna"], variants[variant]["rna"]], "files":variants[variant]["hits"]})
+                    output_line.append(variant_line)
                    
-                for hit in variants[variant]["hits"]:
-                    if hit not in matches:
-                        matches.append(hit) 
-                
                 matches_count += 1     
             total_count += 1
         
@@ -62,6 +66,7 @@ if __name__ == "__main__":
         for row in output_line:
             counts = ""
             for file in row["files"]:
-                counts += str(get_expression_count(feature_counts_output, row["out"][0].replace("_gene", ""), dir_dict["bam"] + remove_prefix_and_suffix(file)))+","  
-            out_line=row["out"]+[counts]
+                counts += str(get_expression_count(feature_counts_output, row["out"]["gene_id"].replace("_gene", ""), dir_dict["bam"] + remove_prefix_and_suffix(file)))+","  
+            counts=counts.rsplit(',', maxsplit=1)[0]
+            out_line=list(row["out"].values())+[counts]
             out_file.write('\t'.join(map(str, out_line)) + '\n')
