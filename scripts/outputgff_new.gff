@@ -1,6 +1,0 @@
-##gff-version 3
-##sequence-region 1 1 2697637
-##sequence-region 2 1 28391
-##FASTA
-1	prokka	gene	689167	689610	.	-	.	ID=ACCFDFCE_00647_gene;locus_tag=ACCFDFCE_00647
-1	prokka	gene	1665410	1666456	.	-	.	ID=ACCFDFCE_01589_gene;Name=citZ;gene=citZ;locus_tag=ACCFDFCE_01589

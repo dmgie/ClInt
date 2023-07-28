@@ -1,3 +1,8 @@
-/programs/*
-/temp_variables.sh
-temp_variables.sh
+/.nextflow
+/work
+/.nextflow.log/*
+/.nextflow.log*
+/clint.sif
+/workflow_output
+/deduped*
+/haplotype*
