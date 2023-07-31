@@ -35,6 +35,7 @@ if __name__ == "__main__":
         
         for idx, variant in enumerate(variants, start=1):
             if "rna" in variants[variant] and "dna" in variants[variant]:
+                print("#####", variant, variants[variant])
                 print(f"\nVariant {idx}")
                 print(variant, "REF:", variants[variant]["ref"], "ALT DNA:", variants[variant]["dna"], "ALT RNA:", variants[variant]["rna"])
                 extracted_lines = get_gff_lines(gff_file, variants[variant]["chromosome"], variant, 0, feature, [])
@@ -42,6 +43,7 @@ if __name__ == "__main__":
                   
                 for line in extracted_lines:
                     values = line.split('\t')
+
                     variant_line = {
                         "out": {
                             "gene_id":   extract_attribute(values[8], 'ID='),
@@ -50,8 +52,8 @@ if __name__ == "__main__":
                             "end":       values[4],
                             "var_pos":   variant,
                             "ref":       variants[variant]["ref"],
-                            "dna_alt":   variants[variant]["dna"],
-                            "rna_alt":   variants[variant]["rna"]
+                            "dna_alt":   calculate_allele_percentages(variants[variant]["dna"]),
+                            "rna_alt":   calculate_allele_percentages(variants[variant]["rna"])
                         },
                         "files": variants[variant]["hits"]
                     }
@@ -67,9 +69,11 @@ if __name__ == "__main__":
         print(f"\n\nCounted {matches_count} dna/rna variant matches, {total_count} variants in total ({round(matches_count/total_count,2)}%).")
 
         create_gff(gff_file_new, get_gff_header(gff_file), gff_lines)
-        run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in bam_file_string)), gff_file_new, feature_counts_output, "gene")
+        #run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in bam_file_string)), gff_file_new, feature_counts_output, "gene")
+
 
         for row in output_line:
+            # print(row)
             counts = ""
             for file in row["files"]:
                 counts += str(get_expression_count(feature_counts_output, row["out"]["gene_id"].replace("_gene", ""), dir_dict["bam"] + remove_prefix_and_suffix(file)))+","  

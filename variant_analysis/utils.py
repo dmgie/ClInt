@@ -153,6 +153,29 @@ def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     filename = filename.replace(suffix, "")
     return filename
 
+def calculate_allele_percentages(allele_sequence):
+    allele_sequence = allele_sequence.replace(",", "")
+    allele_count = {}
+    total_alleles = len(allele_sequence)
+
+    for allele in allele_sequence:
+        allele_count[allele] = allele_count.get(allele, 0) + 1
+
+    allele_percentages = {}
+    allele_percentages["TOT"] = total_alleles
+    
+    for allele, count in reversed(dict(sorted(allele_count.items(), key=lambda item: item[1])).items()):
+        percentage = (count / total_alleles)
+        allele_percentages[allele] = percentage
+
+    counts_string = []
+    for count in allele_percentages:
+        counts_string.append(f"{count}:{allele_percentages[count]}")
+
+    return " ".join(counts_string)
+
+    
 
 
-## check the expression in files with differente allele
+
+## TODO: check the expression in files with differente allele
