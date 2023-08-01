@@ -6,31 +6,33 @@ def read_vcf_file(directories):
     variants_dict = {}
 
     for type in directories:
-        directory = os.fsencode(directories[type])
-        for file in os.listdir(directory):
-            filename = os.fsencode(file).decode()
-            if filename.endswith(".vcf"):
-                with pysam.VariantFile(directory+file) as vcf:
-                    for record in vcf:
-                        chrom = record.chrom
-                        pos = record.pos
-                        ref = record.ref
-                        alt = ",".join(map(str, record.alts))
+        if type == "dna" or type == "rna":
+            directory = os.fsencode(directories[type])
+            for file in os.listdir(directory):
+                filename = os.fsencode(file).decode()
+                if filename.endswith(".vcf") and filename.startswith("haplotype_dedup_snc_trimmed") or filename.startswith("S_aureus"):
+                    # print("found", filename)
+                    with pysam.VariantFile(directory+file) as vcf:
+                        for record in vcf:
+                            chrom = record.chrom
+                            pos = record.pos
+                            ref = record.ref
+                            alt = ",".join(map(str, record.alts))
                         
-                        if pos in variants_dict:
-                            if type in variants_dict[pos]:
-                                variants_dict[pos][type] += ","+alt
-                                variants_dict[pos]["hits"] += [filename]
+                            if pos in variants_dict:
+                                if type in variants_dict[pos]:
+                                    variants_dict[pos][type] += ","+alt
+                                    variants_dict[pos]["hits"].update({filename:alt})
+                                else:
+                                    variants_dict[pos][type] = alt
+                                    variants_dict[pos]["hits"] = {filename:alt}
                             else:
-                                variants_dict[pos][type] = alt
-                                variants_dict[pos]["hits"] = [filename]
-                        else:
-                            variants_dict[pos] = {
-                             "ref": ref,
-                              type: alt,
-                              "hits": [filename],
-                              "chromosome":chrom
-                            }         
+                                variants_dict[pos] = {
+                                "ref": ref,
+                                type: alt,
+                                "hits": {filename:alt},
+                                "chromosome":chrom
+                                }         
     return variants_dict
 
 def print_variants():
@@ -71,14 +73,13 @@ def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lin
                                 start_pos, end_pos = int(start), int(end)
                                 if (start_pos - extend) <= position <= (end_pos + extend):
                                     extracted_lines.append(line.strip())
-                    
-                                
+                                           
         if not extracted_lines:
             extend += 10
             return get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lines)
             
     print(f"Result found at extension {extend}")                                                
-    return extracted_lines
+    return extracted_lines, extend
 
 def create_gff(gff_file, header_lines, extracted_lines):
     """Create new GFF file of extracted lines
@@ -174,8 +175,17 @@ def calculate_allele_percentages(allele_sequence):
 
     return " ".join(counts_string)
 
+
+def get_extend_character(start, end, position):
+    extend_character = ""
     
-
-
+    if int(start) <= position <= int(end):
+        extend_character = f"."
+    elif int(start) > position:
+        extend_character = f"-"
+    else:
+        extend_character = f"+"
+        
+    return extend_character
 
 ## TODO: check the expression in files with differente allele
