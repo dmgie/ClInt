@@ -59,21 +59,24 @@ process HISAT2 {
     def index_name = "ref_idx"
     def extension = "${reads.extension}"
 
-    println "[LOG] HISAT2 :: Extension is ${extension}"
+    // println "[LOG] HISAT2 :: Extension is ${extension}"
     if (extension == 'fasta') {
         """
         echo "Fasta file detected"
         hisat2 -f -p ${task.cpus} \
         --new-summary --summary-file ${aligned_fname}_summary.txt \
         --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        -x ${index_name} \
+        -U ${reads} -S ${aligned_fname}.sam
         """
     } else {
         """
         echo "Fastq file detected"
-        hisat2 -p ${task.cpus} --new-summary --summary-file ${aligned_fname}_summary.txt \
+        hisat2 -p ${task.cpus} \
+        --new-summary --summary-file ${aligned_fname}_summary.txt \
         --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} -U ${reads} -S ${aligned_fname}.sam
+        -x ${index_name} \
+        -U ${reads} -S ${aligned_fname}.sam
         """
     }
 
