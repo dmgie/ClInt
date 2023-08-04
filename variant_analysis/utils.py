@@ -2,7 +2,7 @@ import os
 import pysam
 import subprocess
 
-def read_vcf_file(directories):
+def search_vcf_position_matches(directories):
     variants_dict = {}
 
     for type in directories:
@@ -34,6 +34,12 @@ def read_vcf_file(directories):
                                 "chromosome":chrom
                                 }         
     return variants_dict
+
+def read_bam_filenames(bam_path):
+    bam_files = []
+    for bam_file in os.listdir(bam_path):
+        if bam_file.endswith(".bam") and bam_file.startswith("dedup_snc_trimmed"):
+            bam_files.append(bam_file)
 
 def print_variants():
     print(f"Chromosom: {chrom}")
@@ -187,5 +193,23 @@ def get_extend_character(start, end, position):
         extend_character = f"+"
         
     return extend_character
+
+def get_alt_files(bam_file_string, bam_path):
+    bam_files = os.listdir(bam_path)
+        
+    bam_files_filitered = []
+    bam_files_total = []
+        
+    for file in list(bam_file_string):
+        file = remove_prefix_and_suffix(file)
+        bam_files_filitered.append(file)
+            
+    for file in bam_files:
+        if file.startswith("dedup_snc_trimmed"):
+            file = remove_prefix_and_suffix(file)
+            bam_files_total.append(file)
+        
+    alt_files = set(bam_files_total) - set(bam_files_filitered)
+    return list(alt_files)
 
 ## TODO: check the expression in files with differente allele

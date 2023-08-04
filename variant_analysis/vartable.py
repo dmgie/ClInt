@@ -19,18 +19,22 @@ if __name__ == "__main__":
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
     feature_counts_output_alt = f"{dir_dict['out']}/fc_output_alt.txt"
 
-    variant_positions = read_vcf_file(dir_dict)
+    variant_positions = search_vcf_position_matches(dir_dict)
+    bam_files = read_bam_filenames(dir_dict["bam"])
     gff_lines = []
     extracted_lines = []
     bam_file_string = []
     output_lines = []
     matches_count = 0
     total_count = 0
+
+    ## Starting comparative .vcf analysis
+    print("\nStarting comparative .vcf analysis\n")
     
     ## Create writeable output .tsv file, write header line
     with open(f'./{dir_dict["out"]}/output.tsv', 'wt') as out_file:
         tsv_writer = csv.writer(out_file, delimiter='\t')
-        tsv_writer.writerow(['Gene_ID', "Gene_Name", 'Start', 'End', 'Variant_Position', 'Extension', 'REF', "DNA_ALT", "RNA_ALT", "Counts"])
+        tsv_writer.writerow(['Gene_ID', "Gene_Name", 'Start', 'End', 'Variant_Position', 'Extension', 'REF', "DNA_ALT", "RNA_ALT", "Counts_Alt", "Counts"])
         
         for position in variant_positions:
             if "rna" in variant_positions[position] and "dna" in variant_positions[position]:
@@ -69,86 +73,12 @@ if __name__ == "__main__":
             total_count += 1
 
         
-        bam_files = os.listdir(dir_dict["bam"])
-        
-        bam_files_filitered = []
-        bam_files_total = []
-        
-        for file in bam_file_string:
-            file = remove_prefix_and_suffix(file)
-            bam_files_filitered.append(file)
-            
-        for file in bam_files:
-            if file.startswith("dedup_snc_trimmed"):
-                file = remove_prefix_and_suffix(file)
-                bam_files_total.append(file)
-        
-        alt_files = set(bam_files_total) - set(bam_files_filitered)
-        
-            
-            
-        
-        # for file in os.listdir(dir_dict["bam"]):
-        #     found = False
-        #     for bam_file in bam_file_string:
-        #         filename = os.fsencode(file).decode()
-        #         print(filename)
-        #         if filename.endswith(".bam") and filename in bam_file:
-        #             found = True
-        #             break
-        #         if not found:
-        #             alt_files.append(filename)
-
-
-        # counter = 0
-        # filenames = []
-
-        # for file in os.listdir(dir_dict["bam"]):
-        #     filename = os.fsencode(file).decode()
-        #     filenames.append(filename)
-                
-
-        # list1 = set(remove_prefix_and_suffix(str(bam_file_string)))
-        # list2 = set(remove_prefix_and_suffix(str(filenames)))
-        # #print("######", main_list)
-                    # with pysam.VariantFile(directory+file) as vcf:
-                    #     for record in vcf:
-                    #         chrom = record.chrom
-                    #         pos = record.pos
-                    #         ref = record.ref
-                    #         alt = ",".join(map(str, record.alts))
-                        
-                    #         if pos in variants_dict:
-                    #             if type in variants_dict[pos]:
-                    #                 variants_dict[pos][type] += ","+alt
-                    #                 variants_dict[pos]["hits"].update({filename:alt})
-                    #             else:
-                    #                 variants_dict[pos][type] = alt
-                    #                 variants_dict[pos]["hits"] = {filename:alt}
-                    #         else:
-                    #             variants_dict[pos] = {
-                    #             "ref": ref,
-                    #             type: alt,
-                    #             "hits": {filename:alt},
-                    #             "chromosome":chrom
-                    #             }       
-        # print("#####", found, len(found))  
-        # print("#####", alt_files, len(alt_files))  
-        # print("1", list1)
-        # print("2", list2)
-        
-        ## Console output, summary statistics
-        print(f"\nCounted {matches_count} dna/rna variant position matches, {total_count} variant_positions in total ({round(matches_count/total_count,2)}).")
-        print(f"Generated output file at './{dir_dict['out']}/output.tsv'")
 
         ## Create GFF file of features containing variant_positions
         create_gff(gff_file_new, get_gff_header(dir_dict["gff"]), gff_lines)
 
         ## Run featureCounts only on features that contain at least one position
-        run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in bam_file_string)), gff_file_new, feature_counts_output, "gene")
-        
-        ## Run featureCounts for files thtat do not contain variant
-        run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in alt_files)), gff_file_new, feature_counts_output_alt, "gene")
+        # run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in bam_files)), gff_file_new, feature_counts_output, "gene")
 
         ## Generate TSV output file
         #### -> File contains one position per line, matching in position
@@ -157,12 +87,29 @@ if __name__ == "__main__":
 
         for line in output_lines:
             counts = ""
+            counts_alt = []
+            
+            alternative = get_alt_files(list(line["files"].keys()), dir_dict["bam"])
+            
+            ## Counts for variant matching files
             for file in line["files"]:
                 counts += line["files"][file] + ":" + \
                           str(get_expression_count(feature_counts_output, \
                           line["out"]["gene_id"].replace("_gene", ""), \
                           dir_dict["bam"] + remove_prefix_and_suffix(file))) + ","  
+                          
+            ## Counts for all other files, calculate average
+            for file in alternative:
+                counts_alt.append( int(get_expression_count(feature_counts_output, \
+                         line["out"]["gene_id"].replace("_gene", ""), \
+                         dir_dict["bam"] + remove_prefix_and_suffix(file))))
+            
+            counts_alt_average = int(round(sum(counts_alt)/len(counts_alt),0))
                 
             counts = counts.rsplit(',', maxsplit=1)[0]
-            out_line = list(line["out"].values())+[counts]
+            out_line = list(line["out"].values())+[counts_alt_average]+[counts]
             out_file.write('\t'.join(map(str, out_line)) + '\n')
+
+    ## Console output, summary statistics
+    print(f"\nCounted {matches_count} dna/rna variant position matches, {total_count} variant_positions in total ({round(matches_count/total_count,2)}).")
+    print(f"Generated output file at './{dir_dict['out']}/output.tsv'")
