@@ -10,14 +10,13 @@ if __name__ == "__main__":
         "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
         "bam":"../../../../local_scratch/ClINT/working_files/deduped_bams/",
         "out":"../../output",
-        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome.gff"
+        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome_alt.gff"
     }
 
     os.makedirs(dir_dict["out"], exist_ok=True)
    
     gff_file_new = f"{dir_dict['out']}/gff_new.gff"
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
-    feature_counts_output_alt = f"{dir_dict['out']}/fc_output_alt.txt"
 
     variant_positions = search_vcf_position_matches(dir_dict)
     bam_files = read_bam_filenames(dir_dict["bam"])
@@ -85,26 +84,39 @@ if __name__ == "__main__":
         #### -> feature holding position at both dna and rna sequences
         #### -> Only possible if dna and rna were aligned against same genomic refernce (same coordinate system)
 
+        ## Count normalization
+        # normalize_read_count(feature_counts_output)
+
         for line in output_lines:
             counts = ""
             counts_alt = []
+
+            print("####", line, "#########", line["out"]["gene_id"], line["out"]["gene_id"]!="No_Annotation_Found")
+
+            if line["out"]["gene_id"] != 'No_Annotation_Found':
+                print("Entered if")
             
-            alternative = get_alt_files(list(line["files"].keys()), dir_dict["bam"])
-            
-            ## Counts for variant matching files
-            for file in line["files"]:
-                counts += line["files"][file] + ":" + \
-                          str(get_expression_count(feature_counts_output, \
-                          line["out"]["gene_id"].replace("_gene", ""), \
-                          dir_dict["bam"] + remove_prefix_and_suffix(file))) + ","  
-                          
-            ## Counts for all other files, calculate average
-            for file in alternative:
-                counts_alt.append( int(get_expression_count(feature_counts_output, \
-                         line["out"]["gene_id"].replace("_gene", ""), \
-                         dir_dict["bam"] + remove_prefix_and_suffix(file))))
-            
-            counts_alt_average = int(round(sum(counts_alt)/len(counts_alt),0))
+                alternative = get_alt_files(list(line["files"].keys()), dir_dict["bam"])
+                
+                ## Counts for variant matching files
+                for file in line["files"]:
+                    counts += line["files"][file] + ":" + \
+                            str(get_expression_count(feature_counts_output, \
+                            line["out"]["gene_id"].replace("_gene", ""), \
+                            dir_dict["bam"] + remove_prefix_and_suffix(file))) + ","  
+                            
+                ## Counts for all other files, calculate average
+                for file in alternative:
+                    counts_alt.append( int(get_expression_count(feature_counts_output, \
+                            line["out"]["gene_id"].replace("_gene", ""), \
+                            dir_dict["bam"] + remove_prefix_and_suffix(file))))
+                
+                counts_alt_average = int(round(sum(counts_alt)/len(counts_alt),0))
+
+            elif line["out"]["gene_id"] == 'No_Annotation_Found':
+                print("Entered else")
+                counts = "/"
+                counts_alt_average = "/"
                 
             counts = counts.rsplit(',', maxsplit=1)[0]
             out_line = list(line["out"].values())+[counts_alt_average]+[counts]

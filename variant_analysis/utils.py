@@ -79,6 +79,9 @@ def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lin
                                 start_pos, end_pos = int(start), int(end)
                                 if (start_pos - extend) <= position <= (end_pos + extend):
                                     extracted_lines.append(line.strip())
+                    else:
+                        print(f"No annotation found for position {position}")
+                        return ["/\t/\t/\t/\t/\t.\t-\t.\tID=No_Annotation_Found;locus_tag=No_Annotation_Found"], max_extend
                                            
         if not extracted_lines:
             extend += 10
@@ -145,7 +148,10 @@ def get_expression_count(fc_file, gene_id, filename):
                 expression_count = int(data[index_filename])
                 break
     
-    return expression_count
+    if expression_count is not None:
+        return expression_count
+    else:
+        return "/"
 
 def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     """Removes substrings to trim fileendinding from .vcf files
@@ -183,7 +189,10 @@ def calculate_allele_percentages(allele_sequence):
 
 
 def get_extend_character(start, end, position):
-    extend_character = ""
+    extend_character = "" 
+    
+    if start is "/":
+        return "/"
     
     if int(start) <= position <= int(end):
         extend_character = f"."
@@ -211,5 +220,43 @@ def get_alt_files(bam_file_string, bam_path):
         
     alt_files = set(bam_files_total) - set(bam_files_filitered)
     return list(alt_files)
+
+
+def normalize_read_count(featurecounts_file):
+
+    gene_counts = {}  # Dictionary zur Speicherung der Genzählungen
+
+    with open(featurecounts_file, 'r') as f:
+        for line in f:
+            if not line.startswith("#"):
+                parts = line.strip().split("\t")
+                gene_id = parts[0]
+                counts = [int(x) for x in parts[6:]]  # Zählungen für jede Probe
+                gene_counts[gene_id] = counts
+
+# Berechne die Summe der Counts pro Gen
+    gene_sums = {gene_id: sum(counts) for gene_id, counts in gene_counts.items()}
+
+# Lese die Gesamtzahl der gelesenen Reads aus der FeatureCounts-Datei
+    total_reads = None
+    with open(featurecounts_file, 'r') as f:
+        for line in f:
+            if line.startswith("Status"):
+                total_reads = int(line.split(":")[1].strip())
+                break
+
+    if total_reads is None:
+        raise ValueError("Total reads count not found in the FeatureCounts file.")
+
+# Berechne die TPM-Werte für jedes Gen und speichere sie in einer Ausgabedatei
+    tpm_output_file = "tpm_normalized_output.txt"
+    with open(tpm_output_file, 'w') as output:
+        output.write("GeneID\tTPM\n")
+        for gene_id, counts in gene_counts.items():
+            tpm = [(count / gene_sums[gene_id]) * 1_000_000 / (total_reads / 1_000_000) for count in counts]
+            output.write(f"{gene_id}\t{' '.join(map(str, tpm))}\n")
+
+    print(f"TPM-normalisierte Werte wurden in '{tpm_output_file}' gespeichert.")
+
 
 ## TODO: check the expression in files with differente allele
