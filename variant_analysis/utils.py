@@ -36,10 +36,14 @@ def search_vcf_position_matches(directories):
     return variants_dict
 
 def read_bam_filenames(bam_path):
+
+
     bam_files = []
     for bam_file in os.listdir(bam_path):
         if bam_file.endswith(".bam") and bam_file.startswith("dedup_snc_trimmed"):
             bam_files.append(bam_file)
+
+    return bam_files
 
 def print_variants():
     print(f"Chromosom: {chrom}")
@@ -80,7 +84,6 @@ def get_gff_lines(gff_file, chromosome, position, extend, feature, extracted_lin
                                 if (start_pos - extend) <= position <= (end_pos + extend):
                                     extracted_lines.append(line.strip())
                     else:
-                        print(f"No annotation found for position {position}")
                         return ["/\t/\t/\t/\t/\t.\t-\t.\tID=No_Annotation_Found;locus_tag=No_Annotation_Found"], max_extend
                                            
         if not extracted_lines:
@@ -127,6 +130,9 @@ def extract_attribute(input_string, query):
 def run_featurecounts(input_bam, annotation_gtf, output_counts_file, feature):
     """Run featureCounts as shell subprocess
     """
+
+    print("Works #########")
+
     cmd = f"featureCounts -a {annotation_gtf} -o {output_counts_file} -t {feature} -g {'locus_tag'} {input_bam}"
 
     try:

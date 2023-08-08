@@ -1,7 +1,9 @@
 from itertools import count
+from pickle import TRUE
 from utils import *
 import os
 import csv
+import argparse
 
 if __name__ == "__main__":
 
@@ -10,8 +12,26 @@ if __name__ == "__main__":
         "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
         "bam":"../../../../local_scratch/ClINT/working_files/deduped_bams/",
         "out":"../../output",
-        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome_alt.gff"
+        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome.gff"
     }
+
+    parser = argparse.ArgumentParser(description='Tool for comparative RNA/DNA variant analysis')
+
+    parser.add_argument('--dna', required=False, help='DNA input folder -- required')
+    parser.add_argument('--rna', required=False, help='RNA input folder -- required')
+    parser.add_argument('--bam', required=False, help='BAM input folder -- required')
+    parser.add_argument('--gff', required=False, help='GFF annotation file -- required')
+    parser.add_argument('--out', required=False, help='Output folder -- required')
+    parser.add_argument('--gff_filter', required=False, help='GFF filtering -- optional')
+    args = parser.parse_args()
+
+    print(args)
+
+    for arg in vars(args):
+        if getattr(args, arg) != None and arg in dir_dict.keys():
+            dir_dict[arg] = getattr(args, arg)
+
+    print(dir_dict)
 
     os.makedirs(dir_dict["out"], exist_ok=True)
    
@@ -19,13 +39,15 @@ if __name__ == "__main__":
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
 
     variant_positions = search_vcf_position_matches(dir_dict)
-    bam_files = read_bam_filenames(dir_dict["bam"])
+    bam_filenames = read_bam_filenames(dir_dict["bam"])
     gff_lines = []
     extracted_lines = []
     bam_file_string = []
     output_lines = []
     matches_count = 0
     total_count = 0
+
+    gff_filtering = False
 
     ## Starting comparative .vcf analysis
     print("\nStarting comparative .vcf analysis\n")
@@ -71,13 +93,21 @@ if __name__ == "__main__":
                 matches_count += 1    
             total_count += 1
 
-        
 
-        ## Create GFF file of features containing variant_positions
-        create_gff(gff_file_new, get_gff_header(dir_dict["gff"]), gff_lines)
+        ## Run featureCounts to get read counts per feature (gene)
+        #### -> only on features that contain at least one variant position
+        #### -> OPTIONAL: gff filtering - create new .gff containing only features with variants
+        ####              runtime optimization / might imply normalization issues
 
-        ## Run featureCounts only on features that contain at least one position
-        # run_featurecounts(remove_prefix_and_suffix(" ".join(dir_dict["bam"]+bam for bam in bam_files)), gff_file_new, feature_counts_output, "gene")
+        all_bam_filename_string = remove_prefix_and_suffix(" ".join(dir_dict["bam"] + bam for bam in bam_filenames))
+
+        if gff_filtering is True:
+            input_gff = create_gff(gff_file_new, get_gff_header(dir_dict["gff"]), gff_lines)
+                
+        else:
+            input_gff = dir_dict["gff"]
+
+        # run_featurecounts(all_bam_filename_string, input_gff, feature_counts_output, "gene")  
 
         ## Generate TSV output file
         #### -> File contains one position per line, matching in position
@@ -91,10 +121,7 @@ if __name__ == "__main__":
             counts = ""
             counts_alt = []
 
-            print("####", line, "#########", line["out"]["gene_id"], line["out"]["gene_id"]!="No_Annotation_Found")
-
             if line["out"]["gene_id"] != 'No_Annotation_Found':
-                print("Entered if")
             
                 alternative = get_alt_files(list(line["files"].keys()), dir_dict["bam"])
                 
@@ -114,7 +141,6 @@ if __name__ == "__main__":
                 counts_alt_average = int(round(sum(counts_alt)/len(counts_alt),0))
 
             elif line["out"]["gene_id"] == 'No_Annotation_Found':
-                print("Entered else")
                 counts = "/"
                 counts_alt_average = "/"
                 
