@@ -4,6 +4,7 @@ from utils import *
 import os
 import csv
 import argparse
+import pandas as pd
 
 if __name__ == "__main__":
 
@@ -23,20 +24,18 @@ if __name__ == "__main__":
     parser.add_argument('--gff', required=False, help='GFF annotation file -- required')
     parser.add_argument('--out', required=False, help='Output folder -- required')
     parser.add_argument('--gff_filter', required=False, help='GFF filtering -- optional')
-    args = parser.parse_args()
 
-    print(args)
+    args = parser.parse_args()
 
     for arg in vars(args):
         if getattr(args, arg) != None and arg in dir_dict.keys():
             dir_dict[arg] = getattr(args, arg)
 
-    print(dir_dict)
-
     os.makedirs(dir_dict["out"], exist_ok=True)
    
     gff_file_new = f"{dir_dict['out']}/gff_new.gff"
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
+    feature_counts_tpm = f"{dir_dict['out']}/fc_output_tpm.txt"
 
     variant_positions = search_vcf_position_matches(dir_dict)
     bam_filenames = read_bam_filenames(dir_dict["bam"])
@@ -113,9 +112,9 @@ if __name__ == "__main__":
         #### -> File contains one position per line, matching in position
         #### -> feature holding position at both dna and rna sequences
         #### -> Only possible if dna and rna were aligned against same genomic refernce (same coordinate system)
-
-        ## Count normalization
-        # normalize_read_count(feature_counts_output)
+        
+        # Berechne die TPM-normierten Werte
+        calculate_tpm(feature_counts_output, dir_dict["out"]) 
 
         for line in output_lines:
             counts = ""
@@ -128,13 +127,13 @@ if __name__ == "__main__":
                 ## Counts for variant matching files
                 for file in line["files"]:
                     counts += line["files"][file] + ":" + \
-                            str(get_expression_count(feature_counts_output, \
+                            str(get_expression_count(feature_counts_tpm, \
                             line["out"]["gene_id"].replace("_gene", ""), \
                             dir_dict["bam"] + remove_prefix_and_suffix(file))) + ","  
                             
                 ## Counts for all other files, calculate average
                 for file in alternative:
-                    counts_alt.append( int(get_expression_count(feature_counts_output, \
+                    counts_alt.append( int(get_expression_count(feature_counts_tpm, \
                             line["out"]["gene_id"].replace("_gene", ""), \
                             dir_dict["bam"] + remove_prefix_and_suffix(file))))
                 
