@@ -32,12 +32,13 @@ def CHECKPARAMS() {
 workflow {
     CHECKPARAMS()
  
-    READS = QUALITYCONTROL(Channel.fromPath(params.input_reads))
-    MAPPING(REFERENCE, READS)
+    QC_READS = QUALITYCONTROL(INPUT_READS)
+    MAPPING(REFERENCE, QC_READS)
 
     // If assembly
     // ASSEMBLY(REFERENCE, READS, MAPPING.out) 
     // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
+
     VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
 
 }
