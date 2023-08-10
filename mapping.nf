@@ -131,32 +131,37 @@ process STAR_BUILD {
 }
 
 process STAR {
+    publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
     maxForks 5
     input:
         path ref_idx
         path reads
 
     output:
-        path "aligned_*.bam"
+        path "*.bam"
 
     script:
-    def SAM_HEADER = "@RG\tID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
+    def SAM_HEADER = "ID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
+    def aligned_fname = "${reads.simpleName}"
+    // def SAM_HEADER = "@RG\tID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
     """
     echo "Working on ${reads}"
-    echo "STAR --runThreadN ${task.cpus} \
-    --genomeDir ${ref_idx} \
+    STAR --runThreadN ${task.cpus} \
+    --genomeDir . \
     --readFilesIn ${reads} \
     --readFilesCommand zcat \
     --outSAMtype BAM SortedByCoordinate \
-    --outFileNamePrefix aligned_ \
+    --outFileNamePrefix ${aligned_fname}_ \
     --outSAMattrRGline $SAM_HEADER \
-    --limitBAMsortRAM 10000000000"
-    #touch aligned_${reads.simpleName}.bam
+    --limitBAMsortRAM 10000000000
+
+    # Rename file so that downstream publishDir works fine
+    mv ${aligned_fname}_*.bam ${aligned_fname}.bam
     """
 
     stub:
     """
-    touch aligned_${reads.simpleName}.bam
+    touch ${reads.simpleName}.bam
     """
 }
 
@@ -169,18 +174,10 @@ workflow MAPPING {
         if (mapping_method == "hisat2") {
             ref_idx = HISAT_BUILD(ref_file).collect() // Collect all the output files from HISAT_BUILD to be used as input for HISAT2 
                                                         // (so they don't get individually consumed)
-            // HISAT_BUILD.out.view()
-
             sorted_bams = HISAT2(ref_idx, reads) | SAMTOOLS_SORT
-            //sorted_bams = SAMTOOLS_SORT(aligned_bams)
-
-            // HISAT2.out[1].view()
         } else if (mapping_method == "star") {
-            ref_idx = STAR_BUILD(ref_file, ANNOTATION).collect()
-            // STAR_BUILD.out.view()
-
+            ref_idx = STAR_BUILD(ref_file, Channel.fromPath(params.gff_file)).collect()
             sorted_bams = STAR(ref_idx, reads) // The command itself aligns the bams
-            // STAR.out.view()
         } else {
             println "ERROR: Mapping method not recognised"
         }
