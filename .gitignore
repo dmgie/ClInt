@@ -1,8 +1,8 @@
 /.nextflow
 /work
-/.nextflow.log/*
 /.nextflow.log*
-/clint.sif
-/workflow_output
 /deduped*
 /haplotype*
+/clint.sif
+/workflow_output
+/.mailmap

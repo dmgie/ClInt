@@ -1,8 +1,3 @@
-def docker_current_dir() {
-    REF_FULLPATH = "realpath ${params.reference_file}".execute().text.trim()
-    "docker run -v $PWD:$PWD -v \$PWD:\$PWD -v ${REF_FULLPATH}:${REF_FULLPATH} --user ${params.USER_ID}:${params.GROUP_ID}"
-}
-
 process MarkDuplicates {
     // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
     //       intead of just switching the flag for that read
@@ -14,12 +9,11 @@ process MarkDuplicates {
     output:
         path "dedup_${aligned_bam}"
 
-    def docker = docker_current_dir()
 
     script:
     """
     echo "Working on ${aligned_bam}"
-    ${docker} broadinstitute/gatk gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
+    gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
     """
 
     stub:
@@ -41,17 +35,13 @@ process SplitNCigarReads {
         path "snc_${aligned_bam}"
         // stdout emit: temp
     
-    def docker = docker_current_dir()
 
     script:
-    def NUM_THREADS = 4
     """
     echo "Working on ${aligned_bam}"
 
-    ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
+    gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
 
-    # ${docker} broadinstitute/gatk bash -c "cd \$PWD/; ls -lah ../../"
-    # ${docker} broadinstitute/gatk gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
     # echo "gatk SplitNCigarReads -R ${ref} -I ${aligned_bam} -O split_${aligned_bam}"
     # touch snc_${aligned_bam}
     # ls -lah
@@ -79,14 +69,12 @@ process HaplotypeCaller {
     output:
         path "haplotype_*.vcf"
 
-    def docker = docker_current_dir()
 
     script:
-    def NUM_THREADS = 4
     """
     echo "Working on ${split_bam}"
     samtools index ${split_bam}
-    $docker broadinstitute/gatk gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
+    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
     --pair-hmm-implementation FASTEST_AVAILABLE \
     --smith-waterman FASTEST_AVAILABLE \
     -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/haplotype_${split_bam}.vcf
@@ -115,13 +103,11 @@ process REFERENCE_HELP_FILES {
         // stdout emit: verbo
 
 
-    def docker = docker_current_dir()
     script:
     """
     echo "Running samtools faidx and docker"
     samtools faidx ${ref_file}
-    ${docker} broadinstitute/gatk gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file.baseName}.dict
-    #${docker} broadinstitute/gatk gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file}.dict
+    gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file.baseName}.dict
     ls -lah
     """
 
