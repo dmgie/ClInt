@@ -37,8 +37,11 @@ workflow {
     CHECKPARAMS()
  
     READS = QUALITYCONTROL(Channel.fromPath(params.input_reads))
-    MAPPING(REFERENCE, READS) 
-    ASSEMBLY(REFERENCE, READS, MAPPING.out) 
-    VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
-    // VARIANT_CALLING.out.view()
+    MAPPING(REFERENCE, READS)
+
+    // If assembly
+    // ASSEMBLY(REFERENCE, READS, MAPPING.out) 
+    // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
+    VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
+
 }
