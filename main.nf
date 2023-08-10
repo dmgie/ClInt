@@ -10,11 +10,7 @@ include { VARIANT_CALLING } from './variant_calling'
 
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
-
-def docker_current_dir() {
-    REF_FULLPATH = "realpath ${params.reference_file}".execute().text.trim()
-    "docker run -v $PWD:$PWD -v \$PWD:\$PWD -v ${REF_FULLPATH}:${REF_FULLPATH} --user ${params.USER_ID}:${params.GROUP_ID}"
-}
+INPUT_READS = Channel.fromPath("${params.input_dir}/*.f*q.gz"); // Matches regex
 
 def CHECKPARAMS() {
     println "Checking parameters..."
