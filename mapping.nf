@@ -103,24 +103,24 @@ process STAR_BUILD {
     if (extension == 'gtf') {
         """
             echo "GTF file detected"
-            echo "STAR --runThreadN ${task.cpus} \
+            STAR --runThreadN ${task.cpus} \
             --runMode genomeGenerate \
             --genomeDir . \
             --genomeFastaFiles $ref_file \
             --sjdbGTFfile $annotation \
-            --sjdbOverhang \$(($READ_LENGTH - 1))"
+            --sjdbOverhang \$(($READ_LENGTH - 1))
         """
     } else {
         """
             echo "GFF file detected"
-            echo "STAR --runThreadN ${task.cpus} \
+            STAR --runThreadN ${task.cpus} \
             --runMode genomeGenerate \
             --genomeDir . \
             --genomeFastaFiles $ref_file \
             --sjdbGTFfile $annotation \
             --sjdbGTFtagExonParentTranscript Parent \
             --sjdbGTFfeatureExon $feature \
-            --sjdbOverhang \$(($READ_LENGTH - 1))"
+            --sjdbOverhang \$(($READ_LENGTH - 1))
         """
     }
 
