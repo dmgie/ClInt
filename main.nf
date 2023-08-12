@@ -10,7 +10,7 @@ include { VARIANT_CALLING } from './variant_calling'
 
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
-INPUT_READS = Channel.fromPath("${params.input_dir}/*.f*q.gz"); // Matches regex
+
 
 def CHECKPARAMS() {
     println "Checking parameters..."
@@ -31,9 +31,19 @@ def CHECKPARAMS() {
 
 workflow {
     CHECKPARAMS()
- 
-    QC_READS = QUALITYCONTROL(INPUT_READS)
-    MAPPING(REFERENCE, QC_READS)
+
+    INPUT_READS = Channel.fromPath("${params.input_dir}/*.f*q.gz"); // Matches regex
+    if (paired) {
+        INPUT_READS = Channel.fromPath(${params.metadata}) | splitCsv(header:true) \
+            | map { row -> tuple(row.sample_name,path(row.r1_path),path(row.r2_path) }
+            | view { it }
+    }
+
+
+
+    // QC_READS = QUALITYCONTROL(INPUT_READS)
+    // MAPPING(REFERENCE, QC_READS)
+    // VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
 
     // If assembly
     // ASSEMBLY(REFERENCE, READS, MAPPING.out) 
