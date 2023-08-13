@@ -10,6 +10,7 @@ include { VARIANT_CALLING } from './variant_calling'
 
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
+INPUT_DIR = file(params.input_dir);
 
 
 def CHECKPARAMS() {
