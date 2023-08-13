@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# set -x
 # The input to the script will be a list of *.fastq files 
 # They will be in the format of <sample_name>_<r1_pattern>.fastq.gz and <sample_name>_<r2_pattern>.fastq.gz
 
@@ -15,9 +16,10 @@ while [[ $# -gt 0 ]]; do
             shift
             # If given a folder, recursively find all fastq files
             if [[ -d $1 ]]; then
-                input_files=($(find $1 -name "*.f*q.*"))
+                input_path=$(realpath $1)
+                input_files=($(find $input_path -name "*.f*q.*"))
                 shift
-            # Otherwise add all the files given as input (usually a regex i.e *.fastq.gz)
+                # Otherwise add all the files given as input (usually a regex i.e *.fastq.gz)
             else
                 while [[ $# -gt 0 && ! $1 =~ ^-.* ]]; do
                     input_files+=("$1")
@@ -27,6 +29,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -1|--r1)
             r1_pattern="$2"
+            echo "R1 Pattern: $r1_pattern"
             shift 2
             ;;
         -2|--r2)
@@ -34,8 +37,11 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
-            echo "Unknown option: $1"
-            exit 1
+            if [[ ! $1 =~ ^-.* ]]; then
+                echo "Unknown input (check again): $1"
+                exit 1
+            fi
+            shift
             ;;
     esac
 done
@@ -64,10 +70,10 @@ done
 
 
 # Create the csv file with the sample names and paths
-echo "sample_name,r1_path,r2_path" > samples.csv # Header
+echo "sample_name,r1_path,r2_path" > clint_metadata.csv # Header
 for i in ${!sample_list[@]}; do
     echo "Adding sample ${sample_list[$i]}"
-    echo "${sample_list[$i]},${r1_files[$i]},${r2_files[$i]}" >> samples.csv
+    echo "${sample_list[$i]},${r1_files[$i]},${r2_files[$i]}" >> clint_metadata.csv
 done
 
 
