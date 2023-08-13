@@ -28,13 +28,10 @@ process HISAT_BUILD {
 
     script:
     def index_name = "ref_idx"
+
     """
     echo "Running hisat2-build"
     hisat2-build -p ${task.cpus}  ${ref_file} ${index_name}
-    # touch ref_idx.1.ht2
-    # touch ref_idx.2.ht2
-    # touch ref_idx.3.ht2
-    # ls -lah
     """
 
     stub:
