@@ -167,8 +167,8 @@ process STAR {
 
 workflow MAPPING {
     take: 
-        ref_file
         reads
+        ref_file
     main:
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {

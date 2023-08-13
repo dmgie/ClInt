@@ -83,9 +83,9 @@ process RNASpades {
 
 workflow ASSEMBLY {
     take:
-        ref
         reads
         bam_files
+        ref
     main:
         // Check each element of the assembly array, and run the appropriate assembly processes
         // (e.g. Trinity, RNASpades, etc.)
