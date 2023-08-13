@@ -3,7 +3,7 @@ process FASTP {
     input:
         tuple val(sample_id), path(reads)
     output:
-        path "trimmed_*"
+        tuple val(sample_id), path("*.f*q.*")
 
     script:
     def (read1,read2) = [reads[0], reads[1]]
@@ -19,7 +19,6 @@ process FASTP {
     touch trimmed_${reads}
     """
 }
-
 
 workflow QUALITYCONTROL {
     take:
