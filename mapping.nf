@@ -115,24 +115,29 @@ process STAR_BUILD {
 
     stub:
     """
-    touch one.txt
+    touch annotations.txt
     """
 }
 
 process STAR {
     publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
+    publishDir "${params.output_dir}/bams", mode: 'copy', pattern: '*.bam'
     maxForks 5
+
     input:
+        tuple val(sample_id), path(reads)
         path ref_idx
-        path reads
 
     output:
         path "*.bam"
 
     script:
+    // No strand-specific options needed here
+    def (read1,read2) = [reads[0], reads[1]]
     def SAM_HEADER = "ID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
-    def aligned_fname = "${reads.simpleName}"
-    // def SAM_HEADER = "@RG\tID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
+    def arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
+                                    "--readFilesIn ${read1}"
+
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
