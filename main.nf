@@ -33,21 +33,6 @@ def CHECKPARAMS() {
 workflow {
     CHECKPARAMS()
 
-    // TODO: Call CSV_CREATION depending on if it was paired data or not
-    // TODO: If metadata already given, don't run CSV creation, this allows for adding metadata
-    // TODO: Somehow enable giving strandedness as an option and adjusting the methods based on that
-    //      Could do: If during CSV read = strandedness column empty, we read from nextflow.config (i.e variable with default RF or FR)
-    // TODO: Should input_dir fastq.gz search be recursive to look at all subfolders?
-    // TODO: Build up commands inside the program processes i.e "BASE_COMMANDS", "READ_COMMANDS" etc all depending if paired or unpaired
-    //       Also use ternary's if necessary; Example: https://stackoverflow.com/questions/68442177/nextflow-change-part-of-the-script-basing-on-a-parameter
-    // TODO: Maybe just use `Channel.fromFilePairs` for READS_{1,2}
-    // METADATA = CSV_CREATION(INPUT_DIR)
-    // Setup paired/unpaired reads Channel
-    // INPUT_READS = METADATA.splitCsv(header: true)
-    //     .map { row -> tuple(row.sample_name,file(row.r1_path),file(row.r2_path)) }
-    //     .view { it }
-    // METADATA.std.view()
-
     // Input Reads; {gz,bz2} needed since sometimes naming is bad i.e .gz.normalised.vcf != read file
     if (params.paired) {
         // TODO: placing the "." inside i.e  [.gz|.bz2] causes it to not function?
