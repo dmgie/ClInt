@@ -166,16 +166,14 @@ workflow MAPPING {
     main:
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
-            ref_idx = HISAT_BUILD(ref_file).collect() // Collect all the output files from HISAT_BUILD to be used as input for HISAT2 
-                                                        // (so they don't get individually consumed)
-            sorted_bams = HISAT2(ref_idx, reads) | SAMTOOLS_SORT
+            ref_idx = HISAT_BUILD(ref_file).collect() 
+            sorted_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT
         } else if (mapping_method == "star") {
             ref_idx = STAR_BUILD(ref_file, Channel.fromPath(params.gff_file)).collect()
-            sorted_bams = STAR(ref_idx, reads) // The command itself aligns the bams
+            sorted_bams = STAR(reads,ref_idx) // The command itself aligns the bams
         } else {
             println "ERROR: Mapping method not recognised"
         }
     emit:
         sorted_bams // output STAR/Hisat2 bam files (sorted)
 }
-
