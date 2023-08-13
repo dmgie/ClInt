@@ -46,42 +46,30 @@ process HISAT2 {
     maxForks 5
     publishDir "${params.output_dir}/hisat2_summaries", mode: 'copy', pattern: '*.txt'
     input:
+        tuple val(sample_id), path(reads)
         path ref_idx
-        path reads
     output:
         path "*.sam"
 
     script:
-    def aligned_fname = "${reads.simpleName}"
+    def (read1,read2) = [reads[0], reads[1]]
     def index_name = "ref_idx"
-    def extension = "${reads.extension}"
+    def read_args = params.paired ? "-1 ${read1} -2 ${read2}" : "-U ${read1}"
+    def extension_args = read1.extension == "fasta" ? "-f" : ""
 
-    // println "[LOG] HISAT2 :: Extension is ${extension}"
-    if (extension == 'fasta') {
-        """
-        echo "Fasta file detected"
-        hisat2 -f -p ${task.cpus} \
-        --new-summary --summary-file ${aligned_fname}_summary.txt \
-        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} \
-        -U ${reads} -S ${aligned_fname}.sam
-        """
-    } else {
-        """
-        echo "Fastq file detected"
-        hisat2 -p ${task.cpus} \
-        --new-summary --summary-file ${aligned_fname}_summary.txt \
-        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} \
-        -U ${reads} -S ${aligned_fname}.sam
-        """
-    }
+    """
+    hisat2 ${extension_args} -p ${task.cpus} \
+    --new-summary --summary-file ${sample_id}_summary.txt \
+    --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
+    -x ${index_name} \
+    ${read_args} \
+    -S ${sample_id}.sam
+    """
 
     stub:
-    def aligned_fname = "${reads.simpleName}"
     """
-    touch ${aligned_fname}.sam
-    touch ${aligned_fname}_summary.txt
+    touch ${sample_id}.sam
+    touch ${sample_id}_summary.txt
     """
 }
 
