@@ -145,17 +145,17 @@ process STAR {
     --readFilesIn ${reads} \
     --readFilesCommand zcat \
     --outSAMtype BAM SortedByCoordinate \
-    --outFileNamePrefix ${aligned_fname}_ \
+    --outFileNamePrefix ${sample_id}_ \
     --outSAMattrRGline $SAM_HEADER \
     --limitBAMsortRAM 10000000000
 
-    # Rename file so that downstream publishDir works fine
-    mv ${aligned_fname}_*.bam ${aligned_fname}.bam
+    # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
+    mv ${sample_id}_*.bam ${sample_id}.bam
     """
 
     stub:
     """
-    touch ${reads.simpleName}.bam
+    touch ${sample_id}.bam
     """
 }
 
