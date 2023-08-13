@@ -84,7 +84,11 @@ process STAR_BUILD {
     script:
     def READ_LENGTH = 100
     def feature = "gene"
-    def extension = annotation.extension
+    def extension = annotation.extension // Remove this when changing to *_args
+    def extension_args = annotation.extension == "gtf" ? "" :
+        "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
+
+    // TODO: Modify it to be a single command but with ext_args
     if (extension == 'gtf') {
         """
             echo "GTF file detected"
