@@ -157,10 +157,12 @@ process REFERENCE_HELP_FILES {
 
 workflow VARIANT_CALLING {
     // Run SplitNCigarReads and HaplotypeCaller
+
     take:
         bam
         ref
     main:
+        // TODO: Combine ref_fai, ref_dict and ref into one thing
         REFERENCE_HELP_FILES(ref)
         (ref_fai, ref_dict) = REFERENCE_HELP_FILES.out
         split_bam = SplitNCigarReads(bam, ref_fai, ref_dict, ref) | MarkDuplicates
