@@ -53,6 +53,41 @@ process SplitNCigarReads {
     """
 }
 
+process VariantFiltering {
+    maxForks 8
+    publishDir "${params.output_dir}/filtered_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    publishDir "${params.output_dir}/filtered_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
+    publishDir "${params.output_dir}/filtered_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
+
+    input:
+        path vcf
+        path ref
+        path ref_fai
+        path ref_dict
+
+    output:
+        path "*.vcf"
+
+    script:
+    // Layout: [Filter Expression, Filtername]
+    def filter_options = [
+        ["FS > 20", "FS20"]
+        ["QUAL > 20", "FS20"]
+        ]
+    def filtering_args = ""
+    filter_options.each { expr, name ->
+        filtering_args += "--genotype-filter-expression \"${expr}\" --genotype-filter-name \"${name}\" "
+    }
+    // println ${filter_options}
+    // TODO: Integrate the filtering args into the command block
+    """
+    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' \
+        -R \$PWD/${ref} \
+        -I \$PWD/${vcf} \
+        -O \$PWD/${vcf.simpleName}_filtered.vcf
+    """
+}
+
 process HaplotypeCaller {
     maxForks 8
     publishDir "${params.output_dir}/haplotype_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
