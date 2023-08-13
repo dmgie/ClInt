@@ -105,6 +105,8 @@ process HaplotypeCaller {
         path "haplotype_*.vcf"
 
 
+    // TODO: Split by chromosome. Either have a for loop in the command block (each of them uses chromosome interval)
+    // or then do it on the process-level
     script:
     """
     echo "Working on ${split_bam}"
