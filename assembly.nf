@@ -101,6 +101,8 @@ workflow ASSEMBLY {
         guided = Channel.empty()
         spades = Channel.empty()
 
+        // Note If adding any methods here, make sure to add them to publishDir as well in `variant_calling.nf`
+
         params.assembly.each { method ->
             method = method.toLowerCase()
 
