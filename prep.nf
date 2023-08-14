@@ -1,6 +1,5 @@
 process CSV_CREATION {
     publishDir "${baseDir}", mode: 'copy', overwrite: true
-
     // Create a CSV file detailing the sample_name and the file paths to the read(s)
     // This is depending on whether the "paired" flag was enabled or disabled when launching the command
 

@@ -1,5 +1,5 @@
 process FASTP {
-    maxForks 5
+    label 'preprocess'
     input:
         tuple val(sample_id), path(reads)
     output:
@@ -11,7 +11,7 @@ process FASTP {
                                     "-i ${read1} -o trimmed_${read1}"
     """
     echo "Working on ${reads} using ${arguments}"
-    fastp ${arguments} -j /dev/null -h /dev/null
+    fastp ${arguments} --threads ${task.cpus} -j /dev/null -h /dev/null
     """
 
     stub:

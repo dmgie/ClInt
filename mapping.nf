@@ -1,5 +1,5 @@
 process SAMTOOLS_SORT {
-    maxForks 5
+    label 'mapping'
     input:
         path sam_file
 
@@ -20,7 +20,7 @@ process SAMTOOLS_SORT {
 }
 
 process HISAT_BUILD {
-    maxForks 5
+    label 'mapping'
     input:
         path ref_file
     output:
@@ -43,7 +43,7 @@ process HISAT_BUILD {
 }
 
 process HISAT2 {
-    maxForks 5
+    label 'mapping'
     publishDir "${params.output_dir}/hisat2_summaries", mode: 'copy', pattern: '*.txt'
     input:
         tuple val(sample_id), path(reads)
@@ -74,7 +74,7 @@ process HISAT2 {
 }
 
 process STAR_BUILD {
-    maxForks 5
+    label 'mapping'
     input:
         path ref_file
         path annotation
@@ -120,9 +120,9 @@ process STAR_BUILD {
 }
 
 process STAR {
+    label 'mapping'
     publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
     publishDir "${params.output_dir}/bams", mode: 'copy', pattern: '*.bam'
-    maxForks 5
 
     input:
         tuple val(sample_id), path(reads)
@@ -158,6 +158,7 @@ process STAR {
     touch ${sample_id}.bam
     """
 }
+
 
 workflow MAPPING {
     take: 

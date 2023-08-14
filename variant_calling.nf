@@ -1,7 +1,7 @@
 process MarkDuplicates {
     // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
     //       intead of just switching the flag for that read
-    maxForks 5
+    label 'variant_calling'
     publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
     input:
         path aligned_bam
@@ -24,7 +24,7 @@ process MarkDuplicates {
 
 process SplitNCigarReads {
     // TODO: Change aligned_bam to dedup_bam, and change the output to dedup_${aligned_bam}, because we wanna remove duplicates first
-    maxForks 8
+    label 'variant_calling'
     input:
         path aligned_bam
         path ref_fai
@@ -54,7 +54,7 @@ process SplitNCigarReads {
 }
 
 process VariantFiltering {
-    maxForks 8
+    label 'variant_calling'
     publishDir "${params.output_dir}/filtered_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
     publishDir "${params.output_dir}/filtered_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
     publishDir "${params.output_dir}/filtered_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
@@ -89,7 +89,7 @@ process VariantFiltering {
 }
 
 process HaplotypeCaller {
-    maxForks 8
+    label 'variant_calling'
     publishDir "${params.output_dir}/haplotype_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
     publishDir "${params.output_dir}/haplotype_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
     // FIXME: Maybe fix this so that non-assembled ones have their own name? But currently based upon that
