@@ -50,7 +50,7 @@ workflow {
     INPUT_READS.view()
     QC_READS = QUALITYCONTROL(INPUT_READS)
     MAPPING(QC_READS, REFERENCE)
-    // VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
+    VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
 
     // If assembly wanted
     // ASSEMBLY(INPUT_READS, MAPPING.out, REFERENCE) 
