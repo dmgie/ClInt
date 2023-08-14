@@ -11,7 +11,7 @@ process FASTP {
                                     "-i ${read1} -o trimmed_${read1}"
     """
     echo "Working on ${reads} using ${arguments}"
-    fastp ${arguments} --threads ${task.cpus} -j /dev/null -h /dev/null
+    fastp ${arguments} --thread ${task.cpus} -j /dev/null -h /dev/null
     """
 
     stub:
