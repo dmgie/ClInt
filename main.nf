@@ -18,7 +18,7 @@ def docker_current_dir() {
 
 def CHECKPARAMS() {
     println "Checking parameters..."
-    if (params.input_reads_path == '') {
+    if (params.input_dir == '') {
         error "ERROR: input_reads_path is not set"
     } else if (params.output_dir == '') {
         error "ERROR: output_dir is not set"
@@ -37,8 +37,11 @@ workflow {
     CHECKPARAMS()
  
     READS = QUALITYCONTROL(Channel.fromPath(params.input_reads))
-    MAPPING(REFERENCE, READS) 
-    ASSEMBLY(REFERENCE, READS, MAPPING.out) 
-    VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
-    // VARIANT_CALLING.out.view()
+    MAPPING(REFERENCE, READS)
+
+    // If assembly
+    // ASSEMBLY(REFERENCE, READS, MAPPING.out) 
+    // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
+    VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
+
 }
