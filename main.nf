@@ -10,11 +10,8 @@ include { VARIANT_CALLING } from './variant_calling'
 
 REFERENCE = file(params.reference_file); // Require as file() can't be empty
 ANNOTATION = file(params.gff_file); // Require as file() can't be empty
+INPUT_DIR = file(params.input_dir);
 
-def docker_current_dir() {
-    REF_FULLPATH = "realpath ${params.reference_file}".execute().text.trim()
-    "docker run -v $PWD:$PWD -v \$PWD:\$PWD -v ${REF_FULLPATH}:${REF_FULLPATH} --user ${params.USER_ID}:${params.GROUP_ID}"
-}
 
 def CHECKPARAMS() {
     println "Checking parameters..."
@@ -35,13 +32,28 @@ def CHECKPARAMS() {
 
 workflow {
     CHECKPARAMS()
- 
-    READS = QUALITYCONTROL(Channel.fromPath(params.input_reads))
-    MAPPING(REFERENCE, READS)
 
-    // If assembly
-    // ASSEMBLY(REFERENCE, READS, MAPPING.out) 
-    // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
+    // Input Reads; {gz,bz2} needed since sometimes naming is bad i.e .gz.normalised.vcf != read file
+    // TODO: Either format unpaired to be in the same format as paired i.e tuple val(x), path(read)
+    //       OR let each process accept a val(x) and then on each process determine whether its a tuple
+    if (params.paired) {
+        // TODO: placing the "." inside i.e  [.gz|.bz2] causes it to not function?
+        INPUT_READS = Channel.fromFilePairs("${params.input_dir}/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
+                                            type: 'file',
+                                            maxDepth: 5)
+    } else {
+        // TODO: What to put as the second element in the list for the tuple i.e [name_id, [read, _]]? Or we can just leave it fully alone?
+        INPUT_READS = Channel.fromPath("${params.input_dir}/*.f*q.[gz|bz2]?", type: 'file', maxDepth: 5)
+                    .map(read -> tuple(read.simpleName, read))
+    }
+
+    INPUT_READS.view()
+    QC_READS = QUALITYCONTROL(INPUT_READS)
+    MAPPING(QC_READS, REFERENCE)
     VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
+
+    // If assembly wanted
+    // ASSEMBLY(INPUT_READS, MAPPING.out, REFERENCE) 
+    // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
 
 }

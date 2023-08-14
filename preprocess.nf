@@ -1,14 +1,17 @@
 process FASTP {
-    maxForks 5
+    label 'preprocess'
     input:
-        path reads
+        tuple val(sample_id), path(reads)
     output:
-        path "trimmed_*"
+        tuple val(sample_id), path("*.f*q.*")
 
     script:
+    def (read1,read2) = [reads[0], reads[1]]
+    def arguments = params.paired ? "--in1 ${read1} --in2 ${read2} --out1 trimmed_${read1} --out2 trimmed_${read2}" : 
+                                    "-i ${read1} -o trimmed_${read1}"
     """
-    echo "Working on ${reads}"
-    fastp -i ${reads} -o trimmed_${reads} -j /dev/null -h /dev/null
+    echo "Working on ${reads} using ${arguments}"
+    fastp ${arguments} --thread ${task.cpus} -j /dev/null -h /dev/null
     """
 
     stub:
@@ -16,7 +19,6 @@ process FASTP {
     touch trimmed_${reads}
     """
 }
-
 
 workflow QUALITYCONTROL {
     take:

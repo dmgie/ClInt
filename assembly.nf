@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 include { MAPPING as REMAPPING } from './mapping.nf'
 
 process TRINITY_DENOVO {
-    maxForks 6
+    label 'assembly'
     input:
         path reads
     output:
@@ -30,7 +30,7 @@ process TRINITY_DENOVO {
 }
 
 process TRINITY_GUIDED {
-    maxForks 6
+    label 'assembly'
     input:
         path sorted_aligned_bam
 
@@ -61,7 +61,7 @@ process TRINITY_GUIDED {
 }
 
 process RNASpades {
-    maxForks 5
+    label 'assembly'
     input:
         path reads
 
@@ -83,15 +83,12 @@ process RNASpades {
 
 workflow ASSEMBLY {
     take:
-        ref
         reads
         bam_files
+        ref
     main:
         // Check each element of the assembly array, and run the appropriate assembly processes
         // (e.g. Trinity, RNASpades, etc.)
-
-        // TODO: Do we need to do BAM sorting here? Or can we just use BAM files straight?
-
         // FIXME: Find a way to avoid needing to initialise empty channels & concat/mix them later
         //        as well as maybe a way to simplify the code
 
@@ -100,6 +97,8 @@ workflow ASSEMBLY {
         denovo = Channel.empty()
         guided = Channel.empty()
         spades = Channel.empty()
+
+        // Note If adding any methods here, make sure to add them to publishDir as well in `variant_calling.nf`
 
         params.assembly.each { method ->
             method = method.toLowerCase()
