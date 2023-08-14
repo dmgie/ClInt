@@ -23,7 +23,6 @@ process MarkDuplicates {
 }
 
 process SplitNCigarReads {
-    // TODO: Change aligned_bam to dedup_bam, and change the output to dedup_${aligned_bam}, because we wanna remove duplicates first
     label 'variant_calling'
     input:
         path aligned_bam
@@ -39,12 +38,7 @@ process SplitNCigarReads {
     script:
     """
     echo "Working on ${aligned_bam}"
-
     gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
-
-    # echo "gatk SplitNCigarReads -R ${ref} -I ${aligned_bam} -O split_${aligned_bam}"
-    # touch snc_${aligned_bam}
-    # ls -lah
     """
 
     stub:
@@ -78,13 +72,14 @@ process VariantFiltering {
     filter_options.each { expr, name ->
         filtering_args += "--genotype-filter-expression \"${expr}\" --genotype-filter-name \"${name}\" "
     }
-    // println ${filter_options}
+    // println ${filtering_args}
     // TODO: Integrate the filtering args into the command block
     """
     gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' \
         -R \$PWD/${ref} \
         -I \$PWD/${vcf} \
-        -O \$PWD/${vcf.simpleName}_filtered.vcf
+        -O \$PWD/${vcf.simpleName}_filtered.vcf \
+        ${filtering_args}
     """
 }
 
