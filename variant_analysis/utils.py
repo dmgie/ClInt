@@ -3,7 +3,7 @@ import pysam
 import subprocess
 import pandas as pd
 
-def search_vcf_position_matches(directories):
+def search_vcf_position_matches(directories, dna_startswith, rna_startswith):
     variants_dict = {}
 
     for type in directories:
@@ -11,8 +11,7 @@ def search_vcf_position_matches(directories):
             directory = os.fsencode(directories[type])
             for file in os.listdir(directory):
                 filename = os.fsencode(file).decode()
-                if filename.endswith(".vcf") and filename.startswith("haplotype_dedup_snc_trimmed") or filename.startswith("S_aureus"):
-                    # print("found", filename)
+                if filename.endswith(".vcf") and filename.startswith(rna_startswith) or filename.startswith(dna_startswith):
                     with pysam.VariantFile(directory+file) as vcf:
                         for record in vcf:
                             chrom = record.chrom
@@ -110,6 +109,8 @@ def create_gff(gff_file, header_lines, extracted_lines):
             gff_line = "\t".join(line)
             f.write(f"{gff_line}\n")
 
+    return gff_file
+
 def extract_attribute(input_string, query):
     """Extracts strings from GFF attribute column (9)
 
@@ -131,10 +132,7 @@ def extract_attribute(input_string, query):
 def run_featurecounts(input_bam, annotation_gtf, output_counts_file, feature):
     """Run featureCounts as shell subprocess
     """
-
-    print("Works #########")
-
-    cmd = f"featureCounts -a {annotation_gtf} -o {output_counts_file} -t {feature} -g {'locus_tag'} {input_bam}"
+    cmd = f"featureCounts -a {annotation_gtf} -o {output_counts_file} -t {feature} -g {'locus_tag'} {input_bam} -T 10"
 
     try:
         subprocess.run(cmd, check=True, shell=True)
@@ -172,6 +170,10 @@ def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     filename = filename.replace(prefix, "")
     filename = filename.replace(suffix, "")
     return filename
+
+def string_to_bool(input):
+    if input == "True": return True
+    else: return False
 
 def calculate_allele_percentages(allele_sequence):
     allele_sequence = allele_sequence.replace(",", "")
@@ -239,10 +241,19 @@ def calculate_tpm(feature_counts_output, output_dir):
         counts_df[col] = (counts_df[col] * 1e6 / counts_df[col].sum()).round(0).astype(int)
 
     with open(f'{output_dir}/fc_output_tpm.txt', 'w') as f:
-    # Metainformationen aus der ersten Zeile schreiben
         with open(feature_counts_output, 'r') as input_file:
-            
             first_line = input_file.readline().strip()
             f.write(first_line + '\n')
 
         counts_df.to_csv(f, sep='\t', index=True)
+
+def create_agreement(agreement, dna_count, rna_count, matching_count, output):
+    with open(f"{output}/agreement.tsv", 'w', encoding='utf-8') as file:
+        header = "#### Agreement rate: proportion of dna variants also found in rna per rna .vcf file "
+        header += f"RNA_COUNT: {rna_count} DNA_COUNT: {dna_count} MATCHING: {matching_count}\n"
+        header += "vcf_filename\tagreement_rate\n"
+        file.write(header)
+
+        for filename in agreement:
+            agreement[filename] = round(agreement[filename]/dna_count, 2)
+            file.write(filename + "\t" + str(agreement[filename]) + "\n")
