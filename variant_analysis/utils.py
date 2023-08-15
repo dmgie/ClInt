@@ -3,7 +3,7 @@ import pysam
 import subprocess
 import pandas as pd
 
-def search_vcf_position_matches(directories, dna_startswith, rna_startswith):
+def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use_snpeff):
     variants_dict = {}
 
     for type in directories:
@@ -11,13 +11,19 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith):
             directory = os.fsencode(directories[type])
             for file in os.listdir(directory):
                 filename = os.fsencode(file).decode()
-                if filename.endswith(".vcf") and filename.startswith(rna_startswith) or filename.startswith(dna_startswith):
+                if filename.endswith(".vcf") and (filename.startswith(rna_startswith) or filename.startswith(dna_startswith)):
+                    if use_snpeff: 
+                        # snpeff(directories[type]+filename, directories["out"])
+                        directory = os.fsencode(directories["out"]+"/vcf_annotated/")
+                        file+=os.fsencode(".ann.vcf")
                     with pysam.VariantFile(directory+file) as vcf:
-                        for record in vcf:
-                            chrom = record.chrom
-                            pos = record.pos
-                            ref = record.ref
-                            alt = ",".join(map(str, record.alts))
+                        for variant in vcf:
+                            chrom = variant.chrom
+                            pos = variant.pos
+                            ref = variant.ref
+                            alt = ",".join(map(str, variant.alts))
+                            if use_snpeff: info = variant.info["ANN"]
+                            else: info = "/"
                         
                             if pos in variants_dict:
                                 if type in variants_dict[pos]:
@@ -31,7 +37,8 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith):
                                 "ref": ref,
                                 type: alt,
                                 "hits": {filename:alt},
-                                "chromosome":chrom
+                                "chromosome":chrom,
+                                "annotation":info
                                 }         
     return variants_dict
 
@@ -44,18 +51,6 @@ def read_bam_filenames(bam_path):
             bam_files.append(bam_file)
 
     return bam_files
-
-def print_variants():
-    print(f"Chromosom: {chrom}")
-    print(f"Position: {pos}")
-    print(f"Referenz: {ref}")
-    print(f"Alternativen: {alt}")
-    print(f"Qualität: {qual}")
-    print(f"Filter-Status: {filter_status}")
-    print(f"Info: {info}")
-    print(f"Sample-Informationen: {sample_info}")
-    print("-" * 30)
-
 
 def get_gff_header(gff_file):
     header_lines=[]
@@ -157,6 +152,8 @@ def get_expression_count(fc_file, gene_id, filename):
         return expression_count
     else:
         return "/"
+    
+# def get_snpeff_annotation():
 
 def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     """Removes substrings to trim fileendinding from .vcf files
@@ -249,11 +246,18 @@ def calculate_tpm(feature_counts_output, output_dir):
 
 def create_agreement(agreement, dna_count, rna_count, matching_count, output):
     with open(f"{output}/agreement.tsv", 'w', encoding='utf-8') as file:
-        header = "#### Agreement rate: proportion of dna variants also found in rna per rna .vcf file "
+        header = "####Agreement rate: proportion of dna variants also found in rna per rna .vcf file "
         header += f"RNA_COUNT: {rna_count} DNA_COUNT: {dna_count} MATCHING: {matching_count}\n"
-        header += "vcf_filename\tagreement_rate\n"
+        header += "####vcf_filename\tagreement_rate\n"
         file.write(header)
 
         for filename in agreement:
             agreement[filename] = round(agreement[filename]/dna_count, 2)
             file.write(filename + "\t" + str(agreement[filename]) + "\n")
+
+def snpeff(path, out):
+    print(f"Start: SNPEff analysis for {path}.")
+    file_name = os.path.basename(path)
+    os.makedirs(out+"/vcf_annotated", exist_ok=True)
+    snpeff_command = f"java -Xmx8g -jar ../../snpEff/snpEff.jar -noLog -noStats GRCh37.75 {path} > {out}/vcf_annotated/{file_name}.ann.vcf"
+    subprocess.run(snpeff_command, shell=True, capture_output=True, text=True)
