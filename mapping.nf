@@ -1,5 +1,5 @@
 process SAMTOOLS_SORT {
-    maxForks 5
+    label 'mapping'
     input:
         path sam_file
 
@@ -20,7 +20,7 @@ process SAMTOOLS_SORT {
 }
 
 process HISAT_BUILD {
-    maxForks 5
+    label 'mapping'
     input:
         path ref_file
     output:
@@ -28,13 +28,10 @@ process HISAT_BUILD {
 
     script:
     def index_name = "ref_idx"
+
     """
     echo "Running hisat2-build"
     hisat2-build -p ${task.cpus}  ${ref_file} ${index_name}
-    # touch ref_idx.1.ht2
-    # touch ref_idx.2.ht2
-    # touch ref_idx.3.ht2
-    # ls -lah
     """
 
     stub:
@@ -46,50 +43,38 @@ process HISAT_BUILD {
 }
 
 process HISAT2 {
-    maxForks 5
+    label 'mapping'
     publishDir "${params.output_dir}/hisat2_summaries", mode: 'copy', pattern: '*.txt'
     input:
+        tuple val(sample_id), path(reads)
         path ref_idx
-        path reads
     output:
         path "*.sam"
 
     script:
-    def aligned_fname = "${reads.simpleName}"
+    def (read1,read2) = [reads[0], reads[1]]
     def index_name = "ref_idx"
-    def extension = "${reads.extension}"
+    def read_args = params.paired ? "-1 ${read1} -2 ${read2}" : "-U ${read1}"
+    def extension_args = read1.extension == "fasta" ? "-f" : ""
 
-    // println "[LOG] HISAT2 :: Extension is ${extension}"
-    if (extension == 'fasta') {
-        """
-        echo "Fasta file detected"
-        hisat2 -f -p ${task.cpus} \
-        --new-summary --summary-file ${aligned_fname}_summary.txt \
-        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} \
-        -U ${reads} -S ${aligned_fname}.sam
-        """
-    } else {
-        """
-        echo "Fastq file detected"
-        hisat2 -p ${task.cpus} \
-        --new-summary --summary-file ${aligned_fname}_summary.txt \
-        --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
-        -x ${index_name} \
-        -U ${reads} -S ${aligned_fname}.sam
-        """
-    }
+    """
+    hisat2 ${extension_args} -p ${task.cpus} \
+    --new-summary --summary-file ${sample_id}_summary.txt \
+    --rg-id ${reads} --rg SM:None --rg LB:None --rg PL:Illumina \
+    -x ${index_name} \
+    ${read_args} \
+    -S ${sample_id}.sam
+    """
 
     stub:
-    def aligned_fname = "${reads.simpleName}"
     """
-    touch ${aligned_fname}.sam
-    touch ${aligned_fname}_summary.txt
+    touch ${sample_id}.sam
+    touch ${sample_id}_summary.txt
     """
 }
 
 process STAR_BUILD {
-    maxForks 5
+    label 'mapping'
     input:
         path ref_file
         path annotation
@@ -99,7 +84,11 @@ process STAR_BUILD {
     script:
     def READ_LENGTH = 100
     def feature = "gene"
-    def extension = annotation.extension
+    def extension = annotation.extension // Remove this when changing to *_args
+    def extension_args = annotation.extension == "gtf" ? "" :
+        "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
+
+    // TODO: Modify it to be a single command but with ext_args
     if (extension == 'gtf') {
         """
             echo "GTF file detected"
@@ -126,24 +115,29 @@ process STAR_BUILD {
 
     stub:
     """
-    touch one.txt
+    touch annotations.txt
     """
 }
 
 process STAR {
+    label 'mapping'
     publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
-    maxForks 5
+    publishDir "${params.output_dir}/bams", mode: 'copy', pattern: '*.bam'
+
     input:
+        tuple val(sample_id), path(reads)
         path ref_idx
-        path reads
 
     output:
         path "*.bam"
 
     script:
+    // No strand-specific options needed here
+    def (read1,read2) = [reads[0], reads[1]]
     def SAM_HEADER = "ID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
-    def aligned_fname = "${reads.simpleName}"
-    // def SAM_HEADER = "@RG\tID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
+    def arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
+                                    "--readFilesIn ${read1}"
+
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
@@ -151,37 +145,36 @@ process STAR {
     --readFilesIn ${reads} \
     --readFilesCommand zcat \
     --outSAMtype BAM SortedByCoordinate \
-    --outFileNamePrefix ${aligned_fname}_ \
+    --outFileNamePrefix ${sample_id}_ \
     --outSAMattrRGline $SAM_HEADER \
     --limitBAMsortRAM 10000000000
 
-    # Rename file so that downstream publishDir works fine
-    mv ${aligned_fname}_*.bam ${aligned_fname}.bam
+    # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
+    mv ${sample_id}_*.bam ${sample_id}.bam
     """
 
     stub:
     """
-    touch ${reads.simpleName}.bam
+    touch ${sample_id}.bam
     """
 }
 
+
 workflow MAPPING {
     take: 
-        ref_file
         reads
+        ref_file
     main:
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
-            ref_idx = HISAT_BUILD(ref_file).collect() // Collect all the output files from HISAT_BUILD to be used as input for HISAT2 
-                                                        // (so they don't get individually consumed)
-            sorted_bams = HISAT2(ref_idx, reads) | SAMTOOLS_SORT
+            ref_idx = HISAT_BUILD(ref_file).collect() 
+            sorted_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT
         } else if (mapping_method == "star") {
             ref_idx = STAR_BUILD(ref_file, Channel.fromPath(params.gff_file)).collect()
-            sorted_bams = STAR(ref_idx, reads) // The command itself aligns the bams
+            sorted_bams = STAR(reads,ref_idx) // The command itself aligns the bams
         } else {
             println "ERROR: Mapping method not recognised"
         }
     emit:
         sorted_bams // output STAR/Hisat2 bam files (sorted)
 }
-
