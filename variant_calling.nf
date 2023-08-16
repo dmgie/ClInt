@@ -90,21 +90,22 @@ process SplitNCigarReads {
     """
 }
 
-process HaplotypeCaller {
+process Mutect2 {
     label 'variant_calling'
-    publishDir "${params.output_dir}/haplotype_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    publishDir "${params.output_dir}/haplotype_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
+    publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
     // FIXME: Maybe fix this so that non-assembled ones have their own name? But currently based upon that
     //        only the non-assembled ones don't have a method between "snc" and "trimmed"
-    publishDir "${params.output_dir}/haplotype_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
+    publishDir "${params.output_dir}/vcf/intermediate/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
     input:
-        tuple val(sample_id), path("snc_*"), path(bai)
+        tuple val(sample_id), path(split_bam), path(bai)
         path ref_fai
         path ref_dict
         path ref
+        each chr_interval
 
     output:
-        path "haplotype_*.vcf"
+        tuple val(sample_id), path("*.vcf")
 
 
     // TODO: Change to Mutec2 since HaplotypeCaller is Germline, and we are doing somatic
