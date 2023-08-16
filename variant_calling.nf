@@ -115,21 +115,23 @@ process Mutect2 {
     // TODO: Remove samtools index from here, and instead propogate the ".bai" file throughout the proceeses
     //      This would require modifying input for the previous steps
     script:
+    def name = "haplotype_${split_bam.simpleName}."
+    def interval_args = ""
+    for (chr in chr_interval) {
+        interval_args += " -L ${chr}"
+        name += "${chr}_"
+    }
+    println "Processing mutect2 in interval ${interval_args}"
     """
     echo "Working on ${split_bam}"
-    samtools index ${split_bam}
-
-    chromosomes=({1..22} X Y)
-    for i in "\${chromosomes[@]}"; do
-        echo "Working on ${split_bam}"
-        gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
-            --pair-hmm-implementation FASTEST_AVAILABLE \
-            --native-pair-hmm-threads ${task.cpus} \
-            --smith-waterman FASTEST_AVAILABLE \
-            -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/haplotype_${split_bam}.vcf
-    done
-    #touch haplotype_${split_bam.simpleName}.vcf
-    ls -lah
+    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=${task.cpus}' Mutect2 \
+        --pair-hmm-implementation FASTEST_AVAILABLE \
+        --native-pair-hmm-threads ${task.cpus} \
+        --smith-waterman FASTEST_AVAILABLE \
+        -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/${name}.vcf \
+        ${interval_args}
+    # touch haplotype_${name}.vcf
+    # ls -lah
     """
 
     stub:
