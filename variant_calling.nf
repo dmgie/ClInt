@@ -140,42 +140,46 @@ process Mutect2 {
     """
 }
 
-process VariantFiltering {
-    label 'variant_calling'
-    publishDir "${params.output_dir}/filtered_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    publishDir "${params.output_dir}/filtered_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    publishDir "${params.output_dir}/filtered_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
 
+process MergeBams {
     input:
-        path vcf
-        path ref
-        path ref_fai
-        path ref_dict
+    tuple val(sample_id), path(bams)
 
     output:
-        path "*.vcf"
+    tuple val(sample_id), path("*.bam")
 
     script:
-    // Layout: [Filter Expression, Filtername]
-    def filter_options = [
-        ["FS > 20", "FS20"]
-        ["QUAL > 20", "FS20"]
-        ]
-    def filtering_args = ""
-    filter_options.each { expr, name ->
-        filtering_args += "--genotype-filter-expression \"${expr}\" --genotype-filter-name \"${name}\" "
+    def fname = bams[0].simpleName
+    def allBams = ""
+    for (bam in bams) {
+        allBams += "-I ${bam} " // "${bams} " if using samtools
     }
-    // println ${filtering_args}
-    // TODO: Integrate the filtering args into the command block
+
     """
-    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' \
-        -R \$PWD/${ref} \
-        -I \$PWD/${vcf} \
-        -O \$PWD/${vcf.simpleName}_filtered.vcf \
-        ${filtering_args}
+    gatk GatherBamFiles ${allBams} -O ${fname}.bam
     """
 }
 
+process MergeVcfs {
+    // publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    // publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
+    publishDir "${params.output_dir}/vcf/unfiltered/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
+    input:
+    tuple val(sample_id), path(vcfs)
+
+    output:
+    tuple val(sample_id), path("*.vcf")
+
+    script:
+    def fname = vcfs[0].simpleName
+    def allVCFs = ""
+    for (vcf in vcfs) {
+        allVCFs += "-I ${vcf} " // "${bams} " if using samtools
+    }
+    """
+    gatk MergeVcfs ${allVCFs} -O ${fname}.vcf
+    """
+}
 
 workflow VARIANT_CALLING {
     take:
