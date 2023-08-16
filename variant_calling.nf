@@ -61,26 +61,27 @@ process SplitNCigarReads {
         path ref_fai
         path ref_dict
         path ref
+        each chr_interval // [1,2], use "var" if using entire chromosome list [1..21,X,Y]
 
     output:
-        tuple val(sample_id), path("snc_*"), path(bai)
+        tuple val(sample_id), path("snc_*.bam")
         // stdout emit: temp
-    
 
     // TODO: Parallelise using interval list, in pairs of 2
     // TODO :This is currently done as a single process/job submission, maybe split it into multiple jobs? Then collect and converge
     // FIXME: This might just be overwriting at each interval, so do the looping somewhere else
     script:
-    def chromosomes = (1..22) + ['X', 'Y']
+    def name = "snc_${bam.simpleName}."
+    def interval_args = ""
+    for (chr in chr_interval) {
+        interval_args += " -L ${chr}"
+        name += "${chr}_"
+    }
+    println "Processing SplitNCigarReads for ${interval_args}"
 
     """
-    chromosomes=({1..22} X Y)
-    for i in "\${chromosomes[@]}"; do
-        echo "Working on ${bam}"
-        gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${bam} -O \$PWD/snc_${bam} -L \${i}
-    #done
-    #echo "Working on ${bam}"
-    #gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${bam} -O \$PWD/snc_${bam}
+    echo "Working on ${bam}"
+    gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${bam} -O \$PWD/${name}.bam ${interval_args}
     """
 
     stub:
@@ -179,6 +180,13 @@ workflow VARIANT_CALLING {
         ref
     main:
         REF_AUXILLARY(ref)
+        bam_split_n = SplitNCigarReads(sorted_index_bam,
+                                       REF_AUXILLARY.out.fai,
+                                       REF_AUXILLARY.out.dict,
+                                       REF_AUXILLARY.out.ref,
+                                       groupedPairs) // or [chromosomes]
+            .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+
     emit:
         // split_bam
         haplotype_vcf
