@@ -198,7 +198,10 @@ workflow MAPPING {
             ref_idx = HISAT_BUILD(ref_file).collect() 
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = STAR_BUILD(ref_file, ANNOTATION).collect()
+        ref_idx = params.genome_index != '' ?
+            Channel.fromPath("${params.genome_index}/*").collect() :
+            STAR_BUILD(ref_file, ANNOTATION).collect()
+
             sorted_index_bams = STAR(reads,ref_idx) | SAMTOOLS_INDEX
         } else {
             println "ERROR: Mapping method not recognised"
