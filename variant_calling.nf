@@ -186,6 +186,22 @@ workflow VARIANT_CALLING {
         sorted_index_bam // Sample ID + BAM/BAI
         ref
     main:
+
+        // NOTE: Each sample pair gets processed by:
+        // 1. Defining chromosomal intervals
+        // 2. Pair up the intervals
+        // 3. Create SNC_BAM files for each interval, collect
+        // 4. Merge collected intervals
+
+        def chromosomes = (1..21) + ['X', 'Y']
+        def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
+        for (int i = 0; i < chromosomes.size(); i += 2) {
+            def pair = chromosomes.subList(i, Math.min(i + 2, chromosomes.size()))
+            groupedPairs.add(pair)
+        }
+        // println chromosomes
+        // println groupedPairs
+        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         REF_AUXILLARY(ref)
         bam_split_n = SplitNCigarReads(sorted_index_bam,
                                        REF_AUXILLARY.out.fai,
@@ -194,8 +210,13 @@ workflow VARIANT_CALLING {
                                        groupedPairs) // or [chromosomes]
             .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
+        haplotype_vcf = Mutect2(bam_split_n,
+                                REF_AUXILLARY.out.fai,
+                                REF_AUXILLARY.out.dict,
+                                REF_AUXILLARY.out.ref,
+                                groupedPairs) .groupTuple() | MergeVcfs
+        // haplotype_vcf
     emit:
-        // split_bam
         haplotype_vcf
 }
 
