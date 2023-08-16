@@ -1,4 +1,7 @@
-process REFERENCE_HELP_FILES {
+include { SAMTOOLS_INDEX } from './mapping'
+include { SAMTOOLS_SORT } from './mapping'
+
+process REF_AUXILLARY {
     // This process mainly relates to the necessary side-files
     // such as the .fai and .dict files for the reference genome
     // as these are required in some of the processes
@@ -7,8 +10,9 @@ process REFERENCE_HELP_FILES {
         path ref_file
 
     output:
-        path "${ref_file}.fai" emit: fai
-        path "${ref_file.baseName}.dict" emit: dict
+        path "${ref_file}.fai", emit: fai
+        path "${ref_file.baseName}.dict", emit: dict
+        path ref_file, emit: ref
         // stdout emit: verbo
 
 
@@ -33,13 +37,12 @@ process MarkDuplicates {
     label 'variant_calling'
     publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
     input:
-        tuple val(sample_id), path(aligned_bam), path(bai)
+        tuple val(sample_id), path(aligned_bam)
 
     output:
-        tuple val(sample_id), path("dedup_*"), path(bai)
+        tuple val(sample_id), path("dedup_*.bam")
 
     script:
-    // TODO: Add "--remove-duplicates" options maybe? To actually remove the duplicates
     """
     echo "Working on ${aligned_bam}"
     gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
@@ -175,14 +178,7 @@ workflow VARIANT_CALLING {
         sorted_index_bam // Sample ID + BAM/BAI
         ref
     main:
-        // TODO: Combine ref_fai, ref_dict and ref into one thing
-        REFERENCE_HELP_FILES(ref)
-        (ref_fai, ref_dict) = REFERENCE_HELP_FILES.out
-
-        // TODO: For each sample id, split bam up to process, and then merge them back together
-        bam_split_n = SplitNCigarReads(sorted_index_bam, ref_fai, ref_dict, ref)
-        // | MarkDuplicates
-        // haplotype_vcf = HaplotypeCaller(bam_split_n, ref_fai, ref_dict, ref)
+        REF_AUXILLARY(ref)
     emit:
         // split_bam
         haplotype_vcf
