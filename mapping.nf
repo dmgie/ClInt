@@ -1,21 +1,23 @@
 process SAMTOOLS_SORT {
     label 'mapping'
     input:
-        tuple val(sample_id), path(sam_file)
+        tuple val(sample_id), path(xam_file) //bam or sam
 
     output:
-        tuple val(sample_id), path("*.bam")
+        tuple val(sample_id), path("${xam_file.simpleName}.bam")
 
     script:
 
     """
-    echo "Sorting ${sam_file}"
-    samtools sort -@ ${task.cpus} -o ${sam_file.simpleName}.bam ${sam_file}
+    echo "Sorting ${xam_file}"
+    mv ${xam_file} temp.ext # Avoid bam->bam name collision
+    samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam temp.ext
+    #samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam ${xam_file}
     """
 
     stub:
     """
-    touch ${sam_file.simpleName}.bam
+    touch ${xam_file.simpleName}.bam
     """
 }
 
