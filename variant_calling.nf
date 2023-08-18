@@ -105,15 +105,10 @@ process Mutect2 {
         each chr_interval
 
     output:
-        tuple val(sample_id), path("*.vcf")
+        tuple val(sample_id), path("*.vcf"), emit: vcfs
+        tuple val(sample_id), path("*.tar.gz"), emit: f1r2
+        tuple val(sample_id), path("*.stats"), emit: stats
 
-
-    // TODO: Change to Mutec2 since HaplotypeCaller is Germline, and we are doing somatic
-    // TODO: Split by chromosome. Either have a for loop in the command block (each of them uses chromosome interval)
-    // or then do it on the process-level
-    // TODO: Implement bcftools concat to merge them back together
-    // TODO: Remove samtools index from here, and instead propogate the ".bai" file throughout the proceeses
-    //      This would require modifying input for the previous steps
     script:
     def name = "haplotype_${split_bam.simpleName}."
     def interval_args = ""
