@@ -1,21 +1,47 @@
 process SAMTOOLS_SORT {
     label 'mapping'
     input:
-        path sam_file
+        tuple val(sample_id), path(xam_file) //bam or sam
 
     output:
-        path "*.bam"
+        tuple val(sample_id), path("${xam_file.simpleName}.bam")
 
     script:
 
     """
-    echo "Sorting ${sam_file}"
-    samtools sort -@ ${task.cpus} -o ${sam_file.simpleName}.bam ${sam_file}
+    echo "Sorting ${xam_file}"
+    mv ${xam_file} temp.ext # Avoid bam->bam name collision
+    samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam temp.ext
+    #samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam ${xam_file}
     """
 
     stub:
     """
-    touch ${sam_file.simpleName}.bam
+    touch ${xam_file.simpleName}.bam
+    """
+}
+
+
+process SAMTOOLS_INDEX {
+    label 'mapping'
+    input:
+        tuple val(sample_id), path(bam_file)
+
+    // TODO: Do we have *.bai and bam separate or as one?
+    // As one would make more sense?
+    output:
+        tuple val(sample_id), path(bam_file), path("*.bai")
+
+    script:
+
+    """
+    echo "Sorting ${bam_file}"
+    samtools index -@ ${task.cpus} -o ${bam_file.simpleName}.bai ${bam_file}
+    """
+
+    stub:
+    """
+    touch ${bam_file.simpleName}.bai
     """
 }
 
@@ -49,7 +75,7 @@ process HISAT2 {
         tuple val(sample_id), path(reads)
         path ref_idx
     output:
-        path "*.sam"
+        tuple val(sample_id), path("*.sam")
 
     script:
     def (read1,read2) = [reads[0], reads[1]]
@@ -74,6 +100,7 @@ process HISAT2 {
 }
 
 process STAR_BUILD {
+    publishDir "${params.output_dir}/star_index", mode: 'copy', pattern: '*'
     label 'mapping'
     input:
         path ref_file
@@ -83,7 +110,7 @@ process STAR_BUILD {
 
     script:
     def READ_LENGTH = 100
-    def feature = "gene"
+    def feature = "exon"
     def extension = annotation.extension // Remove this when changing to *_args
     def extension_args = annotation.extension == "gtf" ? "" :
         "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
@@ -122,14 +149,14 @@ process STAR_BUILD {
 process STAR {
     label 'mapping'
     publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
-    publishDir "${params.output_dir}/bams", mode: 'copy', pattern: '*.bam'
+    publishDir "${params.output_dir}/aligned_bams", mode: 'copy', pattern: '*.bam'
 
     input:
         tuple val(sample_id), path(reads)
         path ref_idx
 
     output:
-        path "*.bam"
+        tuple val(sample_id),  path("*.bam")
 
     script:
     // No strand-specific options needed here
@@ -165,16 +192,20 @@ workflow MAPPING {
         reads
         ref_file
     main:
+        ANNOTATION = Channel.fromPath(params.gff_file)
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
             ref_idx = HISAT_BUILD(ref_file).collect() 
-            sorted_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT
+            sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = STAR_BUILD(ref_file, Channel.fromPath(params.gff_file)).collect()
-            sorted_bams = STAR(reads,ref_idx) // The command itself aligns the bams
+        ref_idx = params.genome_index != '' ?
+            Channel.fromPath("${params.genome_index}/*").collect() :
+            STAR_BUILD(ref_file, ANNOTATION).collect()
+
+            sorted_index_bams = STAR(reads,ref_idx) | SAMTOOLS_INDEX
         } else {
             println "ERROR: Mapping method not recognised"
         }
     emit:
-        sorted_bams // output STAR/Hisat2 bam files (sorted)
+        sorted_index_bams // tuple sample_id, bam and bai
 }
