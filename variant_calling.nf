@@ -77,11 +77,11 @@ process SplitNCigarReads {
         interval_args += " -L ${chr}"
         name += "${chr}_"
     }
-    println "Processing SplitNCigarReads for ${interval_args}"
+    println "Processing SplitNCigarReads for ${interval_args} for ${sample_id}"
 
     """
     echo "Working on ${bam}"
-    gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${bam} -O \$PWD/${name}.bam ${interval_args}
+    gatk SplitNCigarReads -R ${ref} -I ${bam} -O ${name}.bam ${interval_args}
     """
 
     stub:
@@ -121,15 +121,20 @@ process Mutect2 {
         interval_args += " -L ${chr}"
         name += "${chr}_"
     }
+
     println "Processing mutect2 in interval ${interval_args}"
+
     """
     echo "Working on ${split_bam}"
     gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=${task.cpus}' Mutect2 \
         --pair-hmm-implementation FASTEST_AVAILABLE \
         --native-pair-hmm-threads ${task.cpus} \
         --smith-waterman FASTEST_AVAILABLE \
-        -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/${name}.vcf \
-        ${interval_args}
+        -R ${ref} \
+        -I ${split_bam} \
+        --f1r2-tar-gz f1r2.tar.gz \
+        ${interval_args} \
+        -O ${name}.vcf \
     # touch haplotype_${name}.vcf
     # ls -lah
     """
@@ -139,6 +144,7 @@ process Mutect2 {
     touch haplotype_${split_bam.simpleName}.vcf
     """
 }
+
 
 
 process MergeBams {
