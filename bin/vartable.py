@@ -12,7 +12,8 @@ if __name__ == "__main__":
         # "rna":"../../../../local_scratch/ClINT/ClInt/haplotype_vcf/Trinity-GG/",
         "bam":"../../../../local_scratch/ClINT/working_files/deduped_bams/",
         "out":"../../output",
-        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome.gff"
+        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome.gff",
+        "vcf":""
     }
 
     #### Argument parsing
@@ -20,6 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Tool for comparative RNA/DNA variant analysis')
 
     parser.add_argument('--dna', required=False, help='DNA input folder')
+    parser.add_argument('--vcf', required=False, help='VCF input folder')
     parser.add_argument('--rna', required=False, help='RNA input folder')
     parser.add_argument('--bam', required=False, help='BAM input folder')
     parser.add_argument('--gff', required=False, help='GFF annotation file')
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     rna_count = 0
 
     ## Starting comparative .vcf analysis
-    print("\nStarting comparative .vcf analysis\n")
+    print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
     
     ## Create writeable output .tsv file, write header line
     with open(f'./{dir_dict["out"]}/output.tsv', 'wt') as out_file:
@@ -151,7 +153,7 @@ if __name__ == "__main__":
             print("Run featureCounts without using gff_filtering")
             input_gff = dir_dict["gff"]
 
-        # run_featurecounts(all_bam_filename_string, input_gff, feature_counts_output, "gene")  
+        run_featurecounts(all_bam_filename_string, input_gff, feature_counts_output, "gene")  
 
         ## Calculate TPM-normalized values (transcripts-per-million)
         #### -> Make samples directly comparable

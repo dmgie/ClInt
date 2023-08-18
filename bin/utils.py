@@ -13,7 +13,7 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
                 filename = os.fsencode(file).decode()
                 if filename.endswith(".vcf") and (filename.startswith(rna_startswith) or filename.startswith(dna_startswith)):
                     if use_snpeff: 
-                        # snpeff(directories[type]+filename, directories["out"])
+                        snpeff(directories[type]+filename, directories["out"])
                         directory = os.fsencode(directories["out"]+"/vcf_annotated/")
                         file+=os.fsencode(".ann.vcf")
                     with pysam.VariantFile(directory+file) as vcf:
