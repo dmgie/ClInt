@@ -1,137 +1,18 @@
-process MarkDuplicates {
-    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
-    //       intead of just switching the flag for that read
-    label 'variant_calling'
-    publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
-    input:
-        path aligned_bam
+include { SAMTOOLS_INDEX } from './mapping'
+include { SAMTOOLS_SORT } from './mapping'
 
-    output:
-        path "dedup_${aligned_bam}"
-
-
-    script:
-    """
-    echo "Working on ${aligned_bam}"
-    gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
-    """
-
-    stub:
-    """
-    touch dedup_${aligned_bam}
-    """
-}
-
-process SplitNCigarReads {
-    label 'variant_calling'
-    input:
-        path aligned_bam
-        path ref_fai
-        path ref_dict
-        path ref
-
-    output:
-        path "snc_${aligned_bam}"
-        // stdout emit: temp
-    
-
-    script:
-    """
-    echo "Working on ${aligned_bam}"
-    gatk SplitNCigarReads -R \$PWD/${ref} -I \$PWD/${aligned_bam} -O \$PWD/snc_${aligned_bam}
-    """
-
-    stub:
-    """
-    touch snc_${aligned_bam}
-    """
-}
-
-process VariantFiltering {
-    label 'variant_calling'
-    publishDir "${params.output_dir}/filtered_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    publishDir "${params.output_dir}/filtered_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    publishDir "${params.output_dir}/filtered_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
-
-    input:
-        path vcf
-        path ref
-        path ref_fai
-        path ref_dict
-
-    output:
-        path "*.vcf"
-
-    script:
-    // Layout: [Filter Expression, Filtername]
-    def filter_options = [
-        ["FS > 20", "FS20"]
-        ["QUAL > 20", "FS20"]
-        ]
-    def filtering_args = ""
-    filter_options.each { expr, name ->
-        filtering_args += "--genotype-filter-expression \"${expr}\" --genotype-filter-name \"${name}\" "
-    }
-    // println ${filtering_args}
-    // TODO: Integrate the filtering args into the command block
-    """
-    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' \
-        -R \$PWD/${ref} \
-        -I \$PWD/${vcf} \
-        -O \$PWD/${vcf.simpleName}_filtered.vcf \
-        ${filtering_args}
-    """
-}
-
-process HaplotypeCaller {
-    label 'variant_calling'
-    publishDir "${params.output_dir}/haplotype_vcf/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    publishDir "${params.output_dir}/haplotype_vcf/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    // FIXME: Maybe fix this so that non-assembled ones have their own name? But currently based upon that
-    //        only the non-assembled ones don't have a method between "snc" and "trimmed"
-    publishDir "${params.output_dir}/haplotype_vcf/normal", mode: 'copy', overwrite: true, pattern: "*snc_trimmed*.vcf"
-    input:
-        path split_bam
-        path ref_fai
-        path ref_dict
-        path ref
-
-    output:
-        path "haplotype_*.vcf"
-
-
-    // TODO: Split by chromosome. Either have a for loop in the command block (each of them uses chromosome interval)
-    // or then do it on the process-level
-    script:
-    """
-    echo "Working on ${split_bam}"
-    samtools index ${split_bam}
-    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=4' HaplotypeCaller \
-    --pair-hmm-implementation FASTEST_AVAILABLE \
-    --smith-waterman FASTEST_AVAILABLE \
-    -R \$PWD/${ref} -I \$PWD/${split_bam} -O \$PWD/haplotype_${split_bam}.vcf
-    #touch haplotype_${split_bam.simpleName}.vcf
-    ls -lah
-    """
-
-    stub:
-    """
-    touch haplotype_${split_bam.simpleName}.vcf
-    """
-}
-
-
-process REFERENCE_HELP_FILES {
+process REF_AUXILLARY {
     // This process mainly relates to the necessary side-files
     // such as the .fai and .dict files for the reference genome
     // as these are required in some of the processes
 
-    input: 
+    input:
         path ref_file
 
     output:
-        path "${ref_file}.fai" 
-        path "${ref_file.baseName}.dict" 
+        path "${ref_file}.fai", emit: fai
+        path "${ref_file.baseName}.dict", emit: dict
+        path ref_file, emit: ref
         // stdout emit: verbo
 
 
@@ -150,21 +31,206 @@ process REFERENCE_HELP_FILES {
     """
 }
 
-workflow VARIANT_CALLING {
-    // Run SplitNCigarReads and HaplotypeCaller
+process MarkDuplicates {
+    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
+    //       intead of just switching the flag for that read
+    label 'variant_calling'
+    publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
+    input:
+        tuple val(sample_id), path(aligned_bam)
 
-    take:
-        bam
-        ref
-    main:
-        // TODO: Combine ref_fai, ref_dict and ref into one thing
-        REFERENCE_HELP_FILES(ref)
-        (ref_fai, ref_dict) = REFERENCE_HELP_FILES.out
-        split_bam = SplitNCigarReads(bam, ref_fai, ref_dict, ref) | MarkDuplicates
-        // SplitNCigarReads.out.view()
-        haplotype_vcf = HaplotypeCaller(split_bam, ref_fai, ref_dict, ref)
-    emit:
-        // split_bam
-        haplotype_vcf
+    output:
+        tuple val(sample_id), path("dedup_*.bam")
+
+    script:
+    """
+    echo "Working on ${aligned_bam}"
+    gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
+    """
+
+    stub:
+    """
+    touch dedup_${aligned_bam}
+    """
 }
 
+process SplitNCigarReads {
+    label 'variant_calling'
+    input:
+        tuple val(sample_id), path(bam), path(bai)
+        path ref_fai
+        path ref_dict
+        path ref
+        each chr_interval // [1,2], use "var" if using entire chromosome list [1..21,X,Y]
+
+    output:
+        tuple val(sample_id), path("snc_*.bam")
+        // stdout emit: temp
+
+    // TODO: Parallelise using interval list, in pairs of 2
+    // TODO :This is currently done as a single process/job submission, maybe split it into multiple jobs? Then collect and converge
+    // FIXME: This might just be overwriting at each interval, so do the looping somewhere else
+    script:
+    def name = "snc_${bam.simpleName}."
+    def interval_args = ""
+    for (chr in chr_interval) {
+        interval_args += " -L ${chr}"
+        name += "${chr}_"
+    }
+    println "Processing SplitNCigarReads for ${interval_args} for ${sample_id}"
+
+    """
+    echo "Working on ${bam}"
+    gatk SplitNCigarReads -R ${ref} -I ${bam} -O ${name}.bam ${interval_args}
+    """
+
+    stub:
+    """
+    touch snc_${bam_bai}
+    """
+}
+
+process Mutect2 {
+    label 'variant_calling'
+    publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
+    // FIXME: Maybe fix this so that non-assembled ones have their own name? But currently based upon that
+    //        only the non-assembled ones don't have a method between "snc" and "trimmed"
+    publishDir "${params.output_dir}/vcf/intermediate/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
+    input:
+        tuple val(sample_id), path(split_bam), path(bai)
+        path ref_fai
+        path ref_dict
+        path ref
+        each chr_interval
+
+    output:
+        tuple val(sample_id), path("*.vcf"), emit: vcfs
+        tuple val(sample_id), path("*.tar.gz"), emit: f1r2
+        tuple val(sample_id), path("*.stats"), emit: stats
+
+    script:
+    def name = "haplotype_${split_bam.simpleName}."
+    def interval_args = ""
+    for (chr in chr_interval) {
+        interval_args += " -L ${chr}"
+        name += "${chr}_"
+    }
+
+    println "Processing mutect2 in interval ${interval_args}"
+
+    """
+    echo "Working on ${split_bam}"
+    gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=${task.cpus}' Mutect2 \
+        --pair-hmm-implementation FASTEST_AVAILABLE \
+        --native-pair-hmm-threads ${task.cpus} \
+        --smith-waterman FASTEST_AVAILABLE \
+        -R ${ref} \
+        -I ${split_bam} \
+        --f1r2-tar-gz f1r2.tar.gz \
+        ${interval_args} \
+        -O ${name}.vcf \
+    # touch haplotype_${name}.vcf
+    # ls -lah
+    """
+
+    stub:
+    """
+    touch haplotype_${split_bam.simpleName}.vcf
+    """
+}
+
+
+
+process MergeBams {
+    input:
+    tuple val(sample_id), path(bams)
+
+    output:
+    tuple val(sample_id), path("*.bam")
+
+    script:
+    def fname = bams[0].simpleName
+    def allBams = ""
+    for (bam in bams) {
+        allBams += "-I ${bam} " // "${bams} " if using samtools
+    }
+
+    """
+    gatk GatherBamFiles ${allBams} -O ${fname}.bam
+    """
+}
+
+process MergeVcfs {
+    // publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    // publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
+    publishDir "${params.output_dir}/vcf/unfiltered/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
+    input:
+    tuple val(sample_id), path(vcfs)
+
+    output:
+    tuple val(sample_id), path("*.vcf")
+
+    script:
+    def fname = vcfs[0].simpleName
+    def allVCFs = ""
+    for (vcf in vcfs) {
+        allVCFs += "-I ${vcf} " // "${bams} " if using samtools
+    }
+    """
+    gatk MergeVcfs ${allVCFs} -O ${fname}.vcf
+    """
+}
+
+workflow VARIANT_CALLING {
+    take:
+        sorted_index_bam // Sample ID + BAM/BAI
+        ref
+    main:
+
+        // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
+        // 1. Defining chromosomal intervals (sets of size i.e 3)
+        // 3. BAM -> Merged Bam & VCF files for each interval, collect
+        // 4. Merge collected intervals
+        def group_size = 2 // How many intervals each GATK command should take
+        def chromosomes = (1..21) + ['X', 'Y']
+        groups = Channel.fromList(chromosomes).collate(group_size)
+        groups.view()
+
+        // The below does the grouping manually, but prevents caching between runs, meaning it
+        // has to be restarted on each run
+        // def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
+        // for (int i = 0; i < chromosomes.size(); i += group_size) {
+        //     def pair = chromosomes.subList(i, Math.min(i + group_size, chromosomes.size()))
+        //     groupedPairs.add(pair)
+        // }
+
+        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
+        REF_AUXILLARY(ref)
+        bam_split_n = SplitNCigarReads(sorted_index_bam,
+                                       REF_AUXILLARY.out.fai,
+                                       REF_AUXILLARY.out.dict,
+                                       REF_AUXILLARY.out.ref,
+                                       groups) // or [chromosomes]
+            .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+
+
+        Mutect2(bam_split_n,
+                REF_AUXILLARY.out.fai,
+                REF_AUXILLARY.out.dict,
+                REF_AUXILLARY.out.ref,
+                groups)
+
+    // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
+    // vcfs & f1r2, to be merged
+        vcfs = Mutect2.out.vcfs.groupTuple()
+        f1r2 = Mutect2.out.f1r2.groupTuple()
+
+
+    // haplotype_vcf
+    // emit:
+    //     Mutect2.out
+}
+
+// TODO: Avoid sending tuple from sorted_index_bam to all the others (since some of them require )
+// use named outputs?

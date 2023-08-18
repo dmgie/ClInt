@@ -38,7 +38,7 @@ workflow {
     //       OR let each process accept a val(x) and then on each process determine whether its a tuple
     if (params.paired) {
         // TODO: placing the "." inside i.e  [.gz|.bz2] causes it to not function?
-        INPUT_READS = Channel.fromFilePairs("${params.input_dir}/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
+        INPUT_READS = Channel.fromFilePairs("${params.input_dir}/**/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
                                             type: 'file',
                                             maxDepth: 5)
     } else {
@@ -47,7 +47,11 @@ workflow {
                     .map(read -> tuple(read.simpleName, read))
     }
 
-    INPUT_READS.view()
+    // Temporary filter, move them out of dir when permissions allow, it removes all DNA-fastq's
+    // INPUT_READS.filter { !it[0].startsWith("FO")  }
+    // INPUT_READS.view()
+
+
     QC_READS = QUALITYCONTROL(INPUT_READS)
     MAPPING(QC_READS, REFERENCE)
     VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
