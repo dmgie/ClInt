@@ -211,17 +211,25 @@ workflow VARIANT_CALLING {
                                        REF_AUXILLARY.out.fai,
                                        REF_AUXILLARY.out.dict,
                                        REF_AUXILLARY.out.ref,
-                                       groupedPairs) // or [chromosomes]
+                                       groups) // or [chromosomes]
             .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
-        haplotype_vcf = Mutect2(bam_split_n,
-                                REF_AUXILLARY.out.fai,
-                                REF_AUXILLARY.out.dict,
-                                REF_AUXILLARY.out.ref,
-                                groupedPairs) .groupTuple() | MergeVcfs
-        // haplotype_vcf
-    emit:
-        haplotype_vcf
+
+        Mutect2(bam_split_n,
+                REF_AUXILLARY.out.fai,
+                REF_AUXILLARY.out.dict,
+                REF_AUXILLARY.out.ref,
+                groups)
+
+    // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
+    // vcfs & f1r2, to be merged
+        vcfs = Mutect2.out.vcfs.groupTuple()
+        f1r2 = Mutect2.out.f1r2.groupTuple()
+
+
+    // haplotype_vcf
+    // emit:
+    //     Mutect2.out
 }
 
 // TODO: Avoid sending tuple from sorted_index_bam to all the others (since some of them require )
