@@ -47,7 +47,11 @@ workflow {
                     .map(read -> tuple(read.simpleName, read))
     }
 
-    INPUT_READS.view()
+    // Temporary filter, move them out of dir when permissions allow, it removes all DNA-fastq's
+    // INPUT_READS.filter { !it[0].startsWith("FO")  }
+    // INPUT_READS.view()
+
+
     QC_READS = QUALITYCONTROL(INPUT_READS)
     MAPPING(QC_READS, REFERENCE)
     VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder
