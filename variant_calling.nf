@@ -188,20 +188,23 @@ workflow VARIANT_CALLING {
         ref
     main:
 
-        // NOTE: Each sample pair gets processed by:
-        // 1. Defining chromosomal intervals
-        // 2. Pair up the intervals
-        // 3. Create SNC_BAM files for each interval, collect
+        // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
+        // 1. Defining chromosomal intervals (sets of size i.e 3)
+        // 3. BAM -> Merged Bam & VCF files for each interval, collect
         // 4. Merge collected intervals
-
+        def group_size = 2 // How many intervals each GATK command should take
         def chromosomes = (1..21) + ['X', 'Y']
-        def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
-        for (int i = 0; i < chromosomes.size(); i += 2) {
-            def pair = chromosomes.subList(i, Math.min(i + 2, chromosomes.size()))
-            groupedPairs.add(pair)
-        }
-        // println chromosomes
-        // println groupedPairs
+        groups = Channel.fromList(chromosomes).collate(group_size)
+        groups.view()
+
+        // The below does the grouping manually, but prevents caching between runs, meaning it
+        // has to be restarted on each run
+        // def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
+        // for (int i = 0; i < chromosomes.size(); i += group_size) {
+        //     def pair = chromosomes.subList(i, Math.min(i + group_size, chromosomes.size()))
+        //     groupedPairs.add(pair)
+        // }
+
         // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         REF_AUXILLARY(ref)
         bam_split_n = SplitNCigarReads(sorted_index_bam,
