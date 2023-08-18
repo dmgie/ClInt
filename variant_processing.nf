@@ -1,4 +1,49 @@
-process VariantFiltering {
+
+
+process LearnReadOrientationModel {
+    // This requires all the f1r2 files from scattered analysis
+    input:
+    val(all_f1r2)
+
+    output:
+    path("*.tar.gz")
+
+    script:
+
+    def input_args = ""
+    for (f1r2 in all_f1r2) {
+        input_args += "-I ${f1r2} "
+    }
+    """
+    gatk LearnReadOrientationModel -I ${input_args} -O read-orientation-model.tar.gz
+    """
+}
+
+process MergeMutectStats {
+    input:
+    val(all_stats)
+
+    output:
+    path("*.stats")
+
+    script:
+
+    def input_args = ""
+    for (stats in all_stats) {
+        input_args += "-stats ${stats} "
+    }
+    """
+    gatk MergeMutectStats \
+        ${input_args}
+        -O merged.stats
+    """
+}
+
+
+
+
+
+process VariantFiltration {
     label 'variant_calling'
     publishDir "${params.output_dir}/vcf/filtered/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
     publishDir "${params.output_dir}/vcf/filtered/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
