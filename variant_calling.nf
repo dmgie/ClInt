@@ -1,11 +1,11 @@
 include { SAMTOOLS_INDEX } from './mapping'
 include { SAMTOOLS_SORT } from './mapping'
+include { MergeOrientationModel } from './variant_processing'
+include { MergeMutectStats } from './variant_processing'
+include { FilterMutect } from './variant_processing'
 
 process REF_AUXILLARY {
-    // This process mainly relates to the necessary side-files
-    // such as the .fai and .dict files for the reference genome
-    // as these are required in some of the processes
-
+    // Creation of .fai/.dict files for GATK
     input:
         path ref_file
 
@@ -32,17 +32,19 @@ process REF_AUXILLARY {
 }
 
 process MarkDuplicates {
-    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
-    //       intead of just switching the flag for that read
     label 'variant_calling'
-    publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
+    publishDir "${params.output_dir}/bams/deduped/", mode: 'symlink', overwrite: true, pattern: "*.bam"
+    publishDir "${params.output_dir}/bams/deduped/", mode: 'symlink', overwrite: true
+
     input:
         tuple val(sample_id), path(aligned_bam)
 
     output:
-        tuple val(sample_id), path("dedup_*.bam")
+        tuple val(sample_id), path("*.bam")
 
     script:
+    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
+    //       intead of just switching the flag for that read
     """
     echo "Working on ${aligned_bam}"
     gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
@@ -61,15 +63,11 @@ process SplitNCigarReads {
         path ref_fai
         path ref_dict
         path ref
-        each chr_interval // [1,2], use "var" if using entire chromosome list [1..21,X,Y]
+        each chr_interval // i.e [[1,2,..], [3,4,..]], does for each [x,y,..]  set
 
     output:
         tuple val(sample_id), path("snc_*.bam")
-        // stdout emit: temp
 
-    // TODO: Parallelise using interval list, in pairs of 2
-    // TODO :This is currently done as a single process/job submission, maybe split it into multiple jobs? Then collect and converge
-    // FIXME: This might just be overwriting at each interval, so do the looping somewhere else
     script:
     def name = "snc_${bam.simpleName}."
     def interval_args = ""
@@ -92,11 +90,6 @@ process SplitNCigarReads {
 
 process Mutect2 {
     label 'variant_calling'
-    publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    // FIXME: Maybe fix this so that non-assembled ones have their own name? But currently based upon that
-    //        only the non-assembled ones don't have a method between "snc" and "trimmed"
-    publishDir "${params.output_dir}/vcf/intermediate/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
     input:
         tuple val(sample_id), path(split_bam), path(bai)
         path ref_fai
@@ -110,7 +103,7 @@ process Mutect2 {
         tuple val(sample_id), path("*.stats"), emit: stats
 
     script:
-    def name = "haplotype_${split_bam.simpleName}."
+    def name = "${split_bam.simpleName}"
     def interval_args = ""
     for (chr in chr_interval) {
         interval_args += " -L ${chr}"
@@ -127,11 +120,9 @@ process Mutect2 {
         --smith-waterman FASTEST_AVAILABLE \
         -R ${ref} \
         -I ${split_bam} \
-        --f1r2-tar-gz f1r2.tar.gz \
+        --f1r2-tar-gz f1r2_${name}.tar.gz \
         ${interval_args} \
         -O ${name}.vcf \
-    # touch haplotype_${name}.vcf
-    # ls -lah
     """
 
     stub:
@@ -139,7 +130,6 @@ process Mutect2 {
     touch haplotype_${split_bam.simpleName}.vcf
     """
 }
-
 
 
 process MergeBams {
@@ -162,14 +152,14 @@ process MergeBams {
 }
 
 process MergeVcfs {
-    // publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    // publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    publishDir "${params.output_dir}/vcf/unfiltered/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
+    publishDir "${params.output_dir}/vcf/unfiltered/", mode: 'copy', overwrite: true, pattern: "*.vcf"
+    // publishDir "${params.output_dir}/vcf/unfiltered/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    // publishDir "${params.output_dir}/vcf/unfiltered/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
     input:
     tuple val(sample_id), path(vcfs)
 
     output:
-    tuple val(sample_id), path("*.vcf")
+    tuple val(sample_id), path("merged_${sample_id}.vcf")
 
     script:
     def fname = vcfs[0].simpleName
@@ -178,7 +168,7 @@ process MergeVcfs {
         allVCFs += "-I ${vcf} " // "${bams} " if using samtools
     }
     """
-    gatk MergeVcfs ${allVCFs} -O ${fname}.vcf
+    gatk MergeVcfs ${allVCFs} -O merged_${sample_id}.vcf
     """
 }
 
@@ -188,22 +178,24 @@ workflow VARIANT_CALLING {
         ref
     main:
 
+
         // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
         // 1. Defining chromosomal intervals (sets of size i.e 3)
         // 3. BAM -> Merged Bam & VCF files for each interval, collect
         // 4. Merge collected intervals
-        def group_size = 2 // How many intervals each GATK command should take
+        def group_size = 5 // How many intervals each GATK command should take
         def chromosomes = (1..21) + ['X', 'Y']
+
+        // NOTE: This (along with the "size: num_lists") parameter allows nextflow to know
+        // how many elements to expect for each sample_id. This allows it know when it can start
+        // the next process much faster rather than waiting on the current one for all to finish
+        // If we have 23 chromosomes, and pair them in 2's, we have at the end 12 intervals, so we supply "12" to the
+        // "size" parameter in "groupTuple"
+        def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
+        println num_lists
+
         groups = Channel.fromList(chromosomes).collate(group_size)
         groups.view()
-
-        // The below does the grouping manually, but prevents caching between runs, meaning it
-        // has to be restarted on each run
-        // def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
-        // for (int i = 0; i < chromosomes.size(); i += group_size) {
-        //     def pair = chromosomes.subList(i, Math.min(i + group_size, chromosomes.size()))
-        //     groupedPairs.add(pair)
-        // }
 
         // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         REF_AUXILLARY(ref)
@@ -212,7 +204,7 @@ workflow VARIANT_CALLING {
                                        REF_AUXILLARY.out.dict,
                                        REF_AUXILLARY.out.ref,
                                        groups) // or [chromosomes]
-            .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
 
         Mutect2(bam_split_n,
@@ -221,10 +213,21 @@ workflow VARIANT_CALLING {
                 REF_AUXILLARY.out.ref,
                 groups)
 
-    // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
-    // vcfs & f1r2, to be merged
-        vcfs = Mutect2.out.vcfs.groupTuple()
-        f1r2 = Mutect2.out.f1r2.groupTuple()
+        // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
+        // vcfs & f1r2, to be merged. So each of these outputs will give 1vcf,1tar,1stats for each sample
+        vcfs = Mutect2.out.vcfs.groupTuple(size: num_lists) | MergeVcfs
+        f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
+        stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
+        // vcfs.view()
+        // f1r2.view()
+        // stats.view()
+
+        // Group all needed files together by sample_id and send to Filtering process
+        sample_grouped = vcfs.concat(f1r2,stats).groupTuple()
+        FilterMutect(sample_grouped,
+                    REF_AUXILLARY.out.fai,
+                    REF_AUXILLARY.out.dict,
+                    REF_AUXILLARY.out.ref)
 
 
     // haplotype_vcf
