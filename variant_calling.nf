@@ -32,17 +32,19 @@ process REF_AUXILLARY {
 }
 
 process MarkDuplicates {
-    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
-    //       intead of just switching the flag for that read
     label 'variant_calling'
-    publishDir "${params.output_dir}/deduped_bam/", mode: 'copy', overwrite: true
+    publishDir "${params.output_dir}/bams/deduped/", mode: 'symlink', overwrite: true, pattern: "*.bam"
+    publishDir "${params.output_dir}/bams/deduped/", mode: 'symlink', overwrite: true
+
     input:
         tuple val(sample_id), path(aligned_bam)
 
     output:
-        tuple val(sample_id), path("dedup_*.bam")
+        tuple val(sample_id), path("*.bam")
 
     script:
+    // NOTE: We an add --REMOVE_DUPLICATES=true to remove duplicates from the final BAM file
+    //       intead of just switching the flag for that read
     """
     echo "Working on ${aligned_bam}"
     gatk MarkDuplicates -I \$PWD/${aligned_bam} -O \$PWD/dedup_${aligned_bam} -M \$PWD/dedup_${aligned_bam}.metrics
