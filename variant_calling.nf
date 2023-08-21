@@ -178,22 +178,24 @@ workflow VARIANT_CALLING {
         ref
     main:
 
+
         // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
         // 1. Defining chromosomal intervals (sets of size i.e 3)
         // 3. BAM -> Merged Bam & VCF files for each interval, collect
         // 4. Merge collected intervals
-        def group_size = 2 // How many intervals each GATK command should take
+        def group_size = 5 // How many intervals each GATK command should take
         def chromosomes = (1..21) + ['X', 'Y']
+
+        // NOTE: This (along with the "size: num_lists") parameter allows nextflow to know
+        // how many elements to expect for each sample_id. This allows it know when it can start
+        // the next process much faster rather than waiting on the current one for all to finish
+        // If we have 23 chromosomes, and pair them in 2's, we have at the end 12 intervals, so we supply "12" to the
+        // "size" parameter in "groupTuple"
+        def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
+        println num_lists
+
         groups = Channel.fromList(chromosomes).collate(group_size)
         groups.view()
-
-        // The below does the grouping manually, but prevents caching between runs, meaning it
-        // has to be restarted on each run
-        // def groupedPairs = [] // i.e [[1,2], [3,4], [5,6]]
-        // for (int i = 0; i < chromosomes.size(); i += group_size) {
-        //     def pair = chromosomes.subList(i, Math.min(i + group_size, chromosomes.size()))
-        //     groupedPairs.add(pair)
-        // }
 
         // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         REF_AUXILLARY(ref)
