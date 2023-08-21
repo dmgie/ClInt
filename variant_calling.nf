@@ -168,7 +168,7 @@ process MergeVcfs {
         allVCFs += "-I ${vcf} " // "${bams} " if using samtools
     }
     """
-    gatk MergeVcfs ${allVCFs} -O ${fname}.vcf
+    gatk MergeVcfs ${allVCFs} -O merged_${sample_id}.vcf
     """
 }
 
