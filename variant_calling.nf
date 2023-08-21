@@ -204,7 +204,7 @@ workflow VARIANT_CALLING {
                                        REF_AUXILLARY.out.dict,
                                        REF_AUXILLARY.out.ref,
                                        groups) // or [chromosomes]
-            .groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
 
         Mutect2(bam_split_n,
