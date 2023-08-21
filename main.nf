@@ -38,6 +38,8 @@ workflow {
     //       OR let each process accept a val(x) and then on each process determine whether its a tuple
     if (params.paired) {
         // TODO: placing the "." inside i.e  [.gz|.bz2] causes it to not function?
+        // FIXME: the input_dir/**/files_here makes it so it has to be in sub-dirs. Make it also take ones that are directly
+        // in the dir i.e input_dir/files_here
         INPUT_READS = Channel.fromFilePairs("${params.input_dir}/**/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
                                             type: 'file',
                                             maxDepth: 5)
