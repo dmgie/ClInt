@@ -103,7 +103,7 @@ process Mutect2 {
         tuple val(sample_id), path("*.stats"), emit: stats
 
     script:
-    def name = "haplotype_${split_bam.simpleName}."
+    def name = "${split_bam.simpleName}"
     def interval_args = ""
     for (chr in chr_interval) {
         interval_args += " -L ${chr}"
