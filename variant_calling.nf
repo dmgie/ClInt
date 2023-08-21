@@ -132,7 +132,6 @@ process Mutect2 {
 }
 
 
-
 process MergeBams {
     input:
     tuple val(sample_id), path(bams)
