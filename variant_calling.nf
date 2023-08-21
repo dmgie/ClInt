@@ -152,14 +152,14 @@ process MergeBams {
 }
 
 process MergeVcfs {
-    // publishDir "${params.output_dir}/vcf/intermediate/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
-    // publishDir "${params.output_dir}/vcf/intermediate/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
-    publishDir "${params.output_dir}/vcf/unfiltered/normal", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
+    publishDir "${params.output_dir}/vcf/unfiltered/", mode: 'copy', overwrite: true, pattern: "*.vcf"
+    // publishDir "${params.output_dir}/vcf/unfiltered/rna_spades", mode: 'copy', overwrite: true, pattern: "*spades_*.vcf"
+    // publishDir "${params.output_dir}/vcf/unfiltered/Trinity-GG", mode: 'copy', overwrite: true, pattern: "*Trinity-GG_*.vcf"
     input:
     tuple val(sample_id), path(vcfs)
 
     output:
-    tuple val(sample_id), path("*.vcf")
+    tuple val(sample_id), path("merged_${sample_id}.vcf")
 
     script:
     def fname = vcfs[0].simpleName
