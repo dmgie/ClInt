@@ -120,11 +120,9 @@ process Mutect2 {
         --smith-waterman FASTEST_AVAILABLE \
         -R ${ref} \
         -I ${split_bam} \
-        --f1r2-tar-gz f1r2.tar.gz \
+        --f1r2-tar-gz f1r2_${name}.tar.gz \
         ${interval_args} \
         -O ${name}.vcf \
-    # touch haplotype_${name}.vcf
-    # ls -lah
     """
 
     stub:
