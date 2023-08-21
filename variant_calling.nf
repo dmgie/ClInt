@@ -2,10 +2,7 @@ include { SAMTOOLS_INDEX } from './mapping'
 include { SAMTOOLS_SORT } from './mapping'
 
 process REF_AUXILLARY {
-    // This process mainly relates to the necessary side-files
-    // such as the .fai and .dict files for the reference genome
-    // as these are required in some of the processes
-
+    // Creation of .fai/.dict files for GATK
     input:
         path ref_file
 
@@ -213,10 +210,21 @@ workflow VARIANT_CALLING {
                 REF_AUXILLARY.out.ref,
                 groups)
 
-    // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
-    // vcfs & f1r2, to be merged
-        vcfs = Mutect2.out.vcfs.groupTuple()
-        f1r2 = Mutect2.out.f1r2.groupTuple()
+        // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
+        // vcfs & f1r2, to be merged. So each of these outputs will give 1vcf,1tar,1stats for each sample
+        vcfs = Mutect2.out.vcfs.groupTuple(size: num_lists) | MergeVcfs
+        f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
+        stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
+        // vcfs.view()
+        // f1r2.view()
+        // stats.view()
+
+        // Group all needed files together by sample_id and send to Filtering process
+        sample_grouped = vcfs.concat(f1r2,stats).groupTuple()
+        FilterMutect(sample_grouped,
+                    REF_AUXILLARY.out.fai,
+                    REF_AUXILLARY.out.dict,
+                    REF_AUXILLARY.out.ref)
 
 
     // haplotype_vcf
