@@ -63,15 +63,11 @@ process SplitNCigarReads {
         path ref_fai
         path ref_dict
         path ref
-        each chr_interval // [1,2], use "var" if using entire chromosome list [1..21,X,Y]
+        each chr_interval // i.e [[1,2,..], [3,4,..]], does for each [x,y,..]  set
 
     output:
         tuple val(sample_id), path("snc_*.bam")
-        // stdout emit: temp
 
-    // TODO: Parallelise using interval list, in pairs of 2
-    // TODO :This is currently done as a single process/job submission, maybe split it into multiple jobs? Then collect and converge
-    // FIXME: This might just be overwriting at each interval, so do the looping somewhere else
     script:
     def name = "snc_${bam.simpleName}."
     def interval_args = ""
