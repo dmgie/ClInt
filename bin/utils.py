@@ -13,7 +13,7 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
                 filename = os.fsencode(file).decode()
                 if filename.endswith(".vcf") and (filename.startswith(rna_startswith) or filename.startswith(dna_startswith)):
                     if use_snpeff: 
-                        snpeff(directories[type]+filename, directories["out"])
+                        # snpeff(directories[type]+filename, directories["out"])
                         directory = os.fsencode(directories["out"]+"/vcf_annotated/")
                         file+=os.fsencode(".ann.vcf")
                     with pysam.VariantFile(directory+file) as vcf:
@@ -152,8 +152,6 @@ def get_expression_count(fc_file, gene_id, filename):
         return expression_count
     else:
         return "/"
-    
-# def get_snpeff_annotation():
 
 def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     """Removes substrings to trim fileendinding from .vcf files
@@ -244,8 +242,8 @@ def calculate_tpm(feature_counts_output, output_dir):
 
         counts_df.to_csv(f, sep='\t', index=True)
 
-def create_agreement(agreement, dna_count, rna_count, matching_count, output):
-    with open(f"{output}/agreement.tsv", 'w', encoding='utf-8') as file:
+def create_agreement(agreement, dna_count, rna_count, matching_count, output, sample_name):
+    with open(f"{output}/{sample_name}_agreement.tsv", 'w', encoding='utf-8') as file:
         header = "####Agreement rate: proportion of dna variants also found in rna per rna .vcf file "
         header += f"RNA_COUNT: {rna_count} DNA_COUNT: {dna_count} MATCHING: {matching_count}\n"
         header += "####vcf_filename\tagreement_rate\n"

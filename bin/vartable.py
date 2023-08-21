@@ -9,10 +9,9 @@ if __name__ == "__main__":
     dir_dict = {
         "dna":"../../../../local_scratch/ClINT/RawData/",
         "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
-        # "rna":"../../../../local_scratch/ClINT/ClInt/haplotype_vcf/Trinity-GG/",
-        "bam":"../../../../local_scratch/ClINT/working_files/deduped_bams/",
-        "out":"../../output",
-        "gff":"../../../../local_scratch/ClINT/RawData/ref_genome.gff",
+        "bam":"",
+        "out":"",
+        "gff":"",
         "vcf":""
     }
 
@@ -68,9 +67,10 @@ if __name__ == "__main__":
 
     ## Starting comparative .vcf analysis
     print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
+    sample_basename = os.path.basename(dir_dict["vcf"][:-1])
     
     ## Create writeable output .tsv file, write header line
-    with open(f'./{dir_dict["out"]}/output.tsv', 'wt') as out_file:
+    with open(f'./{dir_dict["out"]}/{sample_basename}_vartable_output.tsv', 'wt') as out_file:
         tsv_writer = csv.writer(out_file, delimiter='\t')
         tsv_writer.writerow(['Gene_ID', "Gene_Name", "Chromosome", 'Start', 'End', 'Variant_Position', 'Extension', 'REF', "DNA_ALT", "RNA_ALT", "Counts_Alt", "Counts_TPM", "Annotation"])
         
@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
 
         ## Create DNA / RNA agreement output file
-        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"])
+        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"], sample_basename)
 
         ## Run featureCounts to get read counts per feature (gene)
         #### -> only on features that contain at least one variant position
