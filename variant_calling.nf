@@ -1,5 +1,8 @@
 include { SAMTOOLS_INDEX } from './mapping'
 include { SAMTOOLS_SORT } from './mapping'
+include { MergeOrientationModel } from './variant_processing'
+include { MergeMutectStats } from './variant_processing'
+include { FilterMutect } from './variant_processing'
 
 process REF_AUXILLARY {
     // Creation of .fai/.dict files for GATK
