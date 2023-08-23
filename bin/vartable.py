@@ -28,8 +28,8 @@ if __name__ == "__main__":
     parser.add_argument('--gff_filter', required=False, help='OPTIONAL: GFF filtering -> default: False', choices=["True", "False"], default=False)
     parser.add_argument('--snpEff', required=False, help='OPTIONAL: snpEff annotation -> default: False', choices=["True", "False"], default=False)
     parser.add_argument('--agreement', required=False, help='OPTIONAL: DNA / RNA variant agreement -> default: False', choices=["True", "False"], default=True)
-    parser.add_argument('--dna_startswith', required=False, help='OPTIONAL: specify dna naming scheme', default="haplotype_dedup_snc_trimmed")
-    parser.add_argument('--rna_startswith', required=False, help='OPTIONAL: specify rna naming scheme', default="S_aureus")
+    parser.add_argument('--dna_startswith', required=False, nargs='*', help='OPTIONAL: specify dna naming scheme', default="haplotype_dedup_snc_trimmed")
+    parser.add_argument('--rna_startswith', required=False, nargs='*', help='OPTIONAL: specify rna naming scheme', default="S_aureus")
 
     args = parser.parse_args()
 
@@ -42,6 +42,10 @@ if __name__ == "__main__":
     agreement = string_to_bool(vars(args)["agreement"])
     rna_startswith = vars(args)["dna_startswith"]
     dna_startswith = vars(args)["rna_startswith"]
+    
+    print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
+    print(f"RNA files from {dir_dict['rna']}:", rna_startswith)
+    print(f"DNA files from {dir_dict['dna']}:", dna_startswith)
 
     #### Initialization of variables
     
@@ -66,7 +70,7 @@ if __name__ == "__main__":
     rna_count = 0
 
     ## Starting comparative .vcf analysis
-    print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
+    
     sample_basename = os.path.basename(dir_dict["vcf"][:-1])
     
     ## Create writeable output .tsv file, write header line

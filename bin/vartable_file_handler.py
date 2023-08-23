@@ -2,7 +2,7 @@ import argparse
 from subprocess import Popen, PIPE
 import glob
 
-## File handler for vartable.py
+## File handler for vartable.py - COVID dataset
 #### -> Enables parallel processing of variant samples using Popen
 #### -> Takes the top level VCF directory as input, runs vartable.py on all folders below
 #### -> Define vartable input arguments in this file
@@ -14,20 +14,32 @@ def main():
     parser.add_argument('--vcf_path', required=True, help="Top level VCF folder containing sample folders")
     args = parser.parse_args()
     vcf_path = getattr(args, "vcf_path")
+    
+    ## Read sample preparation file
+    #### -> Read in each line of meta file 
+    #### -> Create dictionary patient:{rna/dna:{qbic_id, alt_id}}
+    #### -> Read dict into filename_prefixes: Per patient dna/rna ids (prefixes of actual filenames)
 
-    # metafile_path = "./Q001H_sample_preparations_20230803115337.tsv"
-    # meta_file_sorted = get_meta_file(metafile_path)
-
-    # for patient in meta_file_sorted:
-    #     print("Patient:", patient)
-    #     for sample in meta_file_sorted[patient]:
-    #         print(sample, meta_file_sorted[patient][sample])
-    #     print("\n")
-
-    # print("Number of patients:", len(meta_file_sorted))
-
-    execute_vartable(vcf_path)
-
+    metafile_path = "./Q001H_sample_preparations_20230803115337.tsv"
+    meta_dict_sorted = get_meta_dict(metafile_path)
+    filename_prefixes = get_filname_prefixes(meta_dict_sorted)
+    
+    # patient_match_counter = 0
+    
+    ## Execute vartable
+    #### -> Execute per patient
+    #### -> Only consider matched patients, i.e. DNA and RNA samples are availbale
+    #### -> Give file prefixes of RNA/DNA files to vartable executer as arguments
+    #### -> Use information from sample preparation file
+    
+    for patient in filename_prefixes:
+        if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
+            execute_vartable(vcf_path, filename_prefixes[patient])
+            # patient_match_counter += 1
+              
+    # print("Number of patients:", len(meta_dict_sorted))
+    # print("Number of DNA/RNA matches:", patient_match_counter)
+  
 
 def natural_sort_key(s):
         def atoi(text):
@@ -39,36 +51,7 @@ def sort_dict_by_keys(dictionary):
     sorted_dict = dict(sorted_items)
     return sorted_dict
 
-def get_meta_file(metafile_path):
-    meta_file = {}
-
-    with open(metafile_path, "r") as metafile:
-        lines = metafile.readlines()
-
-        for line in lines[1:]:
-            line_content = line.strip().split('\t')
-
-            patient_id = line_content[4]
-            qbic_identifier = line_content[0]
-            alt_identifier = line_content[1]
-
-            if "BCR" not in alt_identifier and "TCR"  not in alt_identifier:
-                if patient_id in meta_file:
-                    ## Patient # already in dict, extend
-                    sample_number = f"Sample_{len(meta_file[patient_id])+1}"
-                    dict_entry = {sample_number:{'qbic_identifier': qbic_identifier,'alt_identifier': alt_identifier}}
-                    meta_file[patient_id].update(dict_entry)
-
-                else:
-                    ## New dict entry
-                    meta_file[patient_id] = {"Sample_1":{
-                        'qbic_identifier': qbic_identifier,
-                        'alt_identifier': alt_identifier
-                    }}
-            
-    return sort_dict_by_keys(meta_file)
-
-def execute_vartable(vcf_path):
+def execute_vartable(vcf_path, filename_prefixes):
     # Get all directories below vcf_path
     directories = glob.glob(f'{vcf_path}/*/')
 
@@ -76,13 +59,17 @@ def execute_vartable(vcf_path):
 
     ## Command to run vartable.py
     #### -> Define vartable arguments
-    cmd_list = [["python", "./vartable.py", "--vcf", directory, \
+    cmd_list = [["python", "./vartable.py", "--dna", "test_dir_dna", \
+                                            "--rna", "test_dir_rna", \
                                             "--bam", "../../../../local_scratch/ClINT/working_files/deduped_bams/", \
                                             "--out", f'{directory}/vartable_output', \
                                             "--gff", "../../../../local_scratch/ClINT/RawData/ref_genome.gff", \
                                             "--gff_filter", "False", \
                                             "--snpEff", "True", \
-                                            "--agreement", "True"] \
+                                            "--agreement", "True", \
+                                            "--dna_startswith", *filename_prefixes["DNA"], \
+                                            "--rna_startswith", *filename_prefixes["RNA"]] \
+                                                
                                             for directory in directories]
 
     ## Collect commands, create Popen objects
@@ -93,5 +80,52 @@ def execute_vartable(vcf_path):
         stdout, stderr = prc.communicate()
         print(stdout.decode('ascii'), stderr.decode())
         prc.wait()
+        
+def get_filname_prefixes(meta_dict_sorted):
+    filename_prefixes = {}
+    
+    for patient in meta_dict_sorted:
+        for type in meta_dict_sorted[patient]:
+            for sample in meta_dict_sorted[patient][type]:
+                if patient in filename_prefixes:
+                    if type in filename_prefixes[patient]:
+                        filename_prefixes[patient][type].append(meta_dict_sorted[patient][type][sample]["alt_identifier"])
+                    else:
+                        filename_prefixes[patient][type] = [meta_dict_sorted[patient][type][sample]["alt_identifier"]]
+                else:
+                    filename_prefixes[patient] = {type: [meta_dict_sorted[patient][type][sample]["alt_identifier"]]}
+        
+    return filename_prefixes
+
+def get_meta_dict(metafile_path):
+    meta_dict = {}
+
+    with open(metafile_path, "r") as metafile:
+        lines = metafile.readlines()
+
+        for line in lines[1:]:
+            line_content = line.strip().split('\t')
+
+            patient_id = line_content[4]
+            qbic_identifier = line_content[0]
+            alt_identifier = line_content[2]
+            type = line_content[3]  
+            
+            if "TCR" not in alt_identifier and "BCR" not in alt_identifier:
+                if patient_id in meta_dict:
+                    if type in meta_dict[patient_id]:
+                        sample_number = f"Sample_{len(meta_dict[patient_id][type]) + 1}_{type}"
+                        dict_entry = {'qbic_identifier': qbic_identifier, 'alt_identifier': alt_identifier}
+                        meta_dict[patient_id][type][sample_number] = dict_entry
+                    else:
+                        sample_number = f"Sample_1_{type}"
+                        dict_entry = {'qbic_identifier': qbic_identifier, 'alt_identifier': alt_identifier}
+                        meta_dict[patient_id][type] = {sample_number: dict_entry}
+                else:
+                    sample_number = f"Sample_1_{type}"
+                    dict_entry = {'qbic_identifier': qbic_identifier, 'alt_identifier': alt_identifier}
+                    meta_dict[patient_id] = {type: {sample_number: dict_entry}}        
+            
+    return sort_dict_by_keys(meta_dict)
 
 main()
