@@ -7,8 +7,10 @@ import pandas as pd
 if __name__ == "__main__":
 
     dir_dict = {
-        "dna":"../../../../local_scratch/ClINT/RawData/",
-        "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
+        # "dna":"../../../../local_scratch/ClINT/RawData/",
+        # "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
+        "dna":"",
+        "rna":"",
         "bam":"",
         "out":"",
         "gff":"",
@@ -36,12 +38,14 @@ if __name__ == "__main__":
     for arg in vars(args):
         if getattr(args, arg) != None and arg in dir_dict.keys():
             dir_dict[arg] = getattr(args, arg)
+            
+    
 
     gff_filtering = string_to_bool(vars(args)["gff_filter"])
     snpEff = string_to_bool(vars(args)["snpEff"])
     agreement = string_to_bool(vars(args)["agreement"])
-    rna_startswith = vars(args)["dna_startswith"]
-    dna_startswith = vars(args)["rna_startswith"]
+    rna_startswith = vars(args)["rna_startswith"]
+    dna_startswith = vars(args)["dna_startswith"]
     
     print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
     print(f"RNA files from {dir_dict['rna']}:", rna_startswith)
@@ -49,7 +53,8 @@ if __name__ == "__main__":
 
     #### Initialization of variables
     
-    os.makedirs(dir_dict["out"], exist_ok=True)
+    dir_dict["out"] += f"/{dna_startswith[0]}"
+    os.makedirs(f"{dir_dict['out']}", exist_ok=True)
    
     gff_file_new = f"{dir_dict['out']}/gff_new.gff"
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
@@ -57,7 +62,7 @@ if __name__ == "__main__":
 
     variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
 
-    bam_filenames = read_bam_filenames(dir_dict["bam"])
+    bam_filenames = read_bam_filenames(dir_dict["bam"], rna_startswith)
     gff_lines = []
     extracted_gff_lines = []
     bam_file_string = []
@@ -74,7 +79,7 @@ if __name__ == "__main__":
     sample_basename = os.path.basename(dir_dict["vcf"][:-1])
     
     ## Create writeable output .tsv file, write header line
-    with open(f'./{dir_dict["out"]}/{sample_basename}_vartable_output.tsv', 'wt') as out_file:
+    with open(f'./{dir_dict["out"]}/{dna_startswith[0]}_vartable_output.tsv', 'wt') as out_file:
         tsv_writer = csv.writer(out_file, delimiter='\t')
         tsv_writer.writerow(['Gene_ID', "Gene_Name", "Chromosome", 'Start', 'End', 'Variant_Position', 'Extension', 'REF', "DNA_ALT", "RNA_ALT", "Counts_Alt", "Counts_TPM", "Annotation"])
         
@@ -140,7 +145,7 @@ if __name__ == "__main__":
 
 
         ## Create DNA / RNA agreement output file
-        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"], sample_basename)
+        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"], dna_startswith[0])
 
         ## Run featureCounts to get read counts per feature (gene)
         #### -> only on features that contain at least one variant position
@@ -180,6 +185,7 @@ if __name__ == "__main__":
                 
                 ## Counts for variant matching files
                 for file in line["files"]:
+                    # print("###FILE", file)
                     line["out"]["counts_tpm"] += line["files"][file] + ":" + \
                             str(get_expression_count(feature_counts_tpm, \
                             line["out"]["gene_id"].replace("_gene", ""), \
@@ -191,7 +197,7 @@ if __name__ == "__main__":
                             line["out"]["gene_id"].replace("_gene", ""), \
                             dir_dict["bam"] + remove_prefix_and_suffix(file))))
                 
-                line["out"]["counts_alt"] = int(round(sum(line["out"]["counts_alt"])/len(line["out"]["counts_alt"]),0))
+                # if len(line["out"]["counts_alt"]) != 0: line["out"]["counts_alt"] = int(round(sum(line["out"]["counts_alt"])/len(line["out"]["counts_alt"]),0))
 
             ## Add / character if no matching annotation feature is found 
             elif line["out"]["gene_id"] == 'No_Annotation_Found':
@@ -205,6 +211,9 @@ if __name__ == "__main__":
             out_file.write('\t'.join(map(str, out_line)) + '\n')
 
     ## Console output, summary statistics
-    print(f"\nCounted {matching_count} dna/rna variant position matches, {total_count} variant_positions in total ({round(matching_count/total_count,2)}).")
-    print(f"Generated meta variant comparison output file at './{dir_dict['out']}/output.tsv'")
+    if matching_count != 0:
+        print(f"\nCounted {matching_count} dna/rna variant position matches, {total_count} variant_positions in total ({round(matching_count/total_count,2)}).")
+        print(f"Generated meta variant comparison output file at './{dir_dict['out']}/output.tsv'")
+    else:
+        print("No (matching) variants found")
     if agreement: print(f"Generated dna/rna agreement output file at './{dir_dict['out']}/agreement.tsv'")

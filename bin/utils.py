@@ -5,49 +5,64 @@ import pandas as pd
 
 def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use_snpeff):
     variants_dict = {}
-
+    prefix_to_files = {
+        "rna":{prefix: [] for prefix in rna_startswith},
+        "dna":{prefix: [] for prefix in dna_startswith}
+    }
+    
+    prefix_dict = {
+        "rna": rna_startswith,
+        "dna": dna_startswith
+    }
+    
     for type in directories:
         if type == "dna" or type == "rna":
             directory = os.fsencode(directories[type])
-            for file in os.listdir(directory):
-                filename = os.fsencode(file).decode()
-                if filename.endswith(".vcf") and (filename.startswith(rna_startswith) or filename.startswith(dna_startswith)):
-                    if use_snpeff: 
-                        # snpeff(directories[type]+filename, directories["out"])
-                        directory = os.fsencode(directories["out"]+"/vcf_annotated/")
-                        file+=os.fsencode(".ann.vcf")
-                    with pysam.VariantFile(directory+file) as vcf:
-                        for variant in vcf:
-                            chrom = variant.chrom
-                            pos = variant.pos
-                            ref = variant.ref
-                            alt = ",".join(map(str, variant.alts))
-                            if use_snpeff: info = variant.info["ANN"]
-                            else: info = "/"
-                        
-                            if pos in variants_dict:
-                                if type in variants_dict[pos]:
-                                    variants_dict[pos][type] += ","+alt
-                                    variants_dict[pos]["hits"].update({filename:alt})
-                                else:
-                                    variants_dict[pos][type] = alt
-                                    variants_dict[pos]["hits"] = {filename:alt}
-                            else:
-                                variants_dict[pos] = {
-                                "ref": ref,
-                                type: alt,
-                                "hits": {filename:alt},
-                                "chromosome":chrom,
-                                "annotation":info
-                                }         
+            for root, _, files in os.walk(directory):
+                for file in files:
+                    file = file.decode()
+                    print("###### FILE", file)
+                    for prefix in prefix_dict[type]:
+                        if file.startswith(prefix):
+                            prefix_to_files[type][prefix].append(os.path.join(root.decode(), file))
+                            if use_snpeff: 
+                                snpeff(directories[type]+file, directories["out"])
+                                directory = os.fsencode(directories["out"]+"/vcf_annotated/")
+                                file+=".ann.vcf"
+                            with pysam.VariantFile(directory+file.encode()) as vcf:
+                                for variant in vcf:
+                                    chrom = variant.chrom
+                                    pos = variant.pos
+                                    ref = variant.ref
+                                    alt = ",".join(map(str, variant.alts))
+                                    if use_snpeff: info = variant.info["ANN"]
+                                    else: info = "/"
+                                
+                                    if pos in variants_dict:
+                                        if type in variants_dict[pos]:
+                                            variants_dict[pos][type] += ","+alt
+                                            variants_dict[pos]["hits"].update({file:alt})
+                                        else:
+                                            variants_dict[pos][type] = alt
+                                            variants_dict[pos]["hits"] = {file:alt}
+                                    else:
+                                        variants_dict[pos] = {
+                                        "ref": ref,
+                                        type: alt,
+                                        "hits": {file:alt},
+                                        "chromosome":chrom,
+                                        "annotation":info
+                                        }   
+    
     return variants_dict
 
-def read_bam_filenames(bam_path):
+def read_bam_filenames(bam_path, prefix):
 
 
     bam_files = []
     for bam_file in os.listdir(bam_path):
-        if bam_file.endswith(".bam") and bam_file.startswith("dedup_snc_trimmed"):
+        # bam_file = os.fsencode(bam_file).decode()
+        if bam_file.endswith(".bam") and bam_file.startswith(tuple(prefix)):
             bam_files.append(bam_file)
 
     return bam_files
@@ -135,6 +150,7 @@ def run_featurecounts(input_bam, annotation_gtf, output_counts_file, feature):
         print(e)
 
 def get_expression_count(fc_file, gene_id, filename):
+    print("Expression Count File:", fc_file, filename)
     expression_count = None
     with open(fc_file, "r") as file:
         lines = file.readlines()
@@ -153,7 +169,7 @@ def get_expression_count(fc_file, gene_id, filename):
     else:
         return "/"
 
-def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
+def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".ann.vcf"):
     """Removes substrings to trim fileendinding from .vcf files
 
     Keyword arguments:
@@ -164,7 +180,15 @@ def remove_prefix_and_suffix(filename, prefix = "haplotype_", suffix = ".vcf"):
     
     filename = filename.replace(prefix, "")
     filename = filename.replace(suffix, "")
+    filename = filename.replace(".vcf", "")
+    
     return filename
+
+def remove_after_bam(input_string):
+    index = input_string.find(".bam")
+    if index != -1:
+        return input_string[:index + 4]
+    return input_string
 
 def string_to_bool(input):
     if input == "True": return True

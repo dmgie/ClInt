@@ -1,6 +1,7 @@
 import argparse
 from subprocess import Popen, PIPE
 import glob
+import subprocess
 
 ## File handler for vartable.py - COVID dataset
 #### -> Enables parallel processing of variant samples using Popen
@@ -36,6 +37,7 @@ def main():
         if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
             execute_vartable(vcf_path, filename_prefixes[patient])
             # patient_match_counter += 1
+        break
               
     # print("Number of patients:", len(meta_dict_sorted))
     # print("Number of DNA/RNA matches:", patient_match_counter)
@@ -53,33 +55,35 @@ def sort_dict_by_keys(dictionary):
 
 def execute_vartable(vcf_path, filename_prefixes):
     # Get all directories below vcf_path
-    directories = glob.glob(f'{vcf_path}/*/')
+    # directories = glob.glob(f'{vcf_path}/*/')
 
-    for d in directories: print(d)
+    # for d in directories: print(d)
+    directory = "./"
 
     ## Command to run vartable.py
     #### -> Define vartable arguments
-    cmd_list = [["python", "./vartable.py", "--dna", "test_dir_dna", \
-                                            "--rna", "test_dir_rna", \
-                                            "--bam", "../../../../local_scratch/ClINT/working_files/deduped_bams/", \
+    cmd_list = [["python", "./vartable.py", "--dna", "../../test_dir/vcf_annotated_dna/", \
+                                            "--rna", "../../test_dir/vcf_annotated_rna/", \
+                                            "--bam", "../../test_dir/bams/", \
                                             "--out", f'{directory}/vartable_output', \
                                             "--gff", "../../../../local_scratch/ClINT/RawData/ref_genome.gff", \
                                             "--gff_filter", "False", \
-                                            "--snpEff", "True", \
+                                            "--snpEff", "False", \
                                             "--agreement", "True", \
                                             "--dna_startswith", *filename_prefixes["DNA"], \
                                             "--rna_startswith", *filename_prefixes["RNA"]] \
                                                 
-                                            for directory in directories]
+                                            ]# for directory in directories]
 
     ## Collect commands, create Popen objects
     prc_list = [Popen(cmd, stdout=PIPE, stderr=PIPE) for cmd in cmd_list]
 
-    ## Execute each of the processes, enable console output
+    # Execute each of the processes, enable console output
     for prc in prc_list:
         stdout, stderr = prc.communicate()
         print(stdout.decode('ascii'), stderr.decode())
         prc.wait()
+    # subprocess.run(cmd_list[0], shell=True, capture_output=True, text=True)
         
 def get_filname_prefixes(meta_dict_sorted):
     filename_prefixes = {}
