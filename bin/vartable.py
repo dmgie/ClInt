@@ -57,7 +57,7 @@ if __name__ == "__main__":
     variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
 
     if variant_positions == None:
-        print("No matching dna/rna files found for this patient, quitting vartable analysis")
+        print("\n>>>>>No matching dna/rna files found - quitting vartable analysis<<<<<")
         sys.exit()
 
     dir_dict["out"] += f"/{dna_startswith[0]}"

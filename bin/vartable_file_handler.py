@@ -36,7 +36,7 @@ def main():
     
     for patient in filename_prefixes:
             if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
-                print("\n####################", patient, filename_prefixes[patient])
+                print("\n##############################", patient, "##############################")
                 execute_vartable(vcf_path, filename_prefixes[patient])
                 # patient_match_counter += 1
             #break
@@ -70,7 +70,7 @@ def execute_vartable(vcf_path, filename_prefixes):
                                             "--out", f'{directory}/vartable_output', \
                                             "--gff", "../../../../local_scratch/ClINT/RawData/ref_genome.gff", \
                                             "--gff_filter", "False", \
-                                            "--snpEff", "False", \
+                                            "--snpEff", "True", \
                                             "--agreement", "True", \
                                             "--dna_startswith", *filename_prefixes["DNA"], \
                                             "--rna_startswith", *filename_prefixes["RNA"]] \
