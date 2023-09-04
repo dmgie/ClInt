@@ -1,4 +1,5 @@
 import argparse
+from re import T
 from subprocess import Popen, PIPE
 import glob
 import subprocess
@@ -34,10 +35,11 @@ def main():
     #### -> Use information from sample preparation file
     
     for patient in filename_prefixes:
-        if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
-            execute_vartable(vcf_path, filename_prefixes[patient])
-            # patient_match_counter += 1
-        break
+            if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
+                print("\n####################", patient, filename_prefixes[patient])
+                execute_vartable(vcf_path, filename_prefixes[patient])
+                # patient_match_counter += 1
+            #break
               
     # print("Number of patients:", len(meta_dict_sorted))
     # print("Number of DNA/RNA matches:", patient_match_counter)
@@ -58,7 +60,7 @@ def execute_vartable(vcf_path, filename_prefixes):
     # directories = glob.glob(f'{vcf_path}/*/')
 
     # for d in directories: print(d)
-    directory = "./"
+    directory = "."
 
     ## Command to run vartable.py
     #### -> Define vartable arguments
@@ -76,13 +78,15 @@ def execute_vartable(vcf_path, filename_prefixes):
                                             ]# for directory in directories]
 
     ## Collect commands, create Popen objects
-    prc_list = [Popen(cmd, stdout=PIPE, stderr=PIPE) for cmd in cmd_list]
-
-    # Execute each of the processes, enable console output
-    for prc in prc_list:
-        stdout, stderr = prc.communicate()
-        print(stdout.decode('ascii'), stderr.decode())
-        prc.wait()
+    # prc_list = [Popen(cmd, stdout=PIPE, stderr=PIPE) for cmd in cmd_list]
+    prc = Popen(cmd_list[0], universal_newlines=True)
+    return_code = prc.wait()
+    
+    # # Execute each of the processes, enable console output
+    # for prc in prc_list:
+    #     stdout, stderr = prc.communicate()
+    #     print(stdout.decode('ascii'), stderr.decode())
+    #     prc.wait()
     # subprocess.run(cmd_list[0], shell=True, capture_output=True, text=True)
         
 def get_filname_prefixes(meta_dict_sorted):

@@ -4,6 +4,7 @@ import subprocess
 import pandas as pd
 
 def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use_snpeff):
+
     variants_dict = {}
     prefix_to_files = {
         "rna":{prefix: [] for prefix in rna_startswith},
@@ -21,7 +22,6 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
             for root, _, files in os.walk(directory):
                 for file in files:
                     file = file.decode()
-                    print("###### FILE", file)
                     for prefix in prefix_dict[type]:
                         if file.startswith(prefix):
                             prefix_to_files[type][prefix].append(os.path.join(root.decode(), file))
@@ -53,8 +53,12 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
                                         "chromosome":chrom,
                                         "annotation":info
                                         }   
-    
-    return variants_dict
+
+    for field in ['rna', 'dna']:
+        if any(prefix_to_files.get(field, {}).values()):
+            return variants_dict
+        else:
+            return None
 
 def read_bam_filenames(bam_path, prefix):
 
@@ -150,7 +154,6 @@ def run_featurecounts(input_bam, annotation_gtf, output_counts_file, feature):
         print(e)
 
 def get_expression_count(fc_file, gene_id, filename):
-    print("Expression Count File:", fc_file, filename)
     expression_count = None
     with open(fc_file, "r") as file:
         lines = file.readlines()

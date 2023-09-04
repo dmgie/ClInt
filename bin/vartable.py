@@ -1,14 +1,13 @@
 from utils import *
 import os
 import csv
+import sys
 import argparse
 import pandas as pd
 
 if __name__ == "__main__":
 
     dir_dict = {
-        # "dna":"../../../../local_scratch/ClINT/RawData/",
-        # "rna":"../../../../local_scratch/ClINT/working_files/deduped_vcfs/",
         "dna":"",
         "rna":"",
         "bam":"",
@@ -53,14 +52,20 @@ if __name__ == "__main__":
 
     #### Initialization of variables
     
+    
+
+    variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
+
+    if variant_positions == None:
+        print("No matching dna/rna files found for this patient, quitting vartable analysis")
+        sys.exit()
+
     dir_dict["out"] += f"/{dna_startswith[0]}"
     os.makedirs(f"{dir_dict['out']}", exist_ok=True)
    
     gff_file_new = f"{dir_dict['out']}/gff_new.gff"
     feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
     feature_counts_tpm = f"{dir_dict['out']}/fc_output_tpm.txt"
-
-    variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
 
     bam_filenames = read_bam_filenames(dir_dict["bam"], rna_startswith)
     gff_lines = []
@@ -78,6 +83,7 @@ if __name__ == "__main__":
     
     sample_basename = os.path.basename(dir_dict["vcf"][:-1])
     
+    print("starting analysis of", sample_basename)
     ## Create writeable output .tsv file, write header line
     with open(f'./{dir_dict["out"]}/{dna_startswith[0]}_vartable_output.tsv', 'wt') as out_file:
         tsv_writer = csv.writer(out_file, delimiter='\t')
