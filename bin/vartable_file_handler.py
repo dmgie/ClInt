@@ -1,8 +1,5 @@
 import argparse
-from re import T
-from subprocess import Popen, PIPE
-import glob
-import subprocess
+from vartable import *
 
 ## File handler for vartable.py - COVID dataset
 #### -> Enables parallel processing of variant samples using Popen
@@ -13,9 +10,18 @@ def main():
     ## Argument parsing
 
     parser = argparse.ArgumentParser(description="File handler for VarTable Analysis")
-    parser.add_argument('--vcf_path', required=True, help="Top level VCF folder containing sample folders")
+    parser.add_argument('--vcf_dna_path', required=False, help="Top level VCF folder containing dna samples")
+    parser.add_argument('--vcf_rna_path', required=False, help="Top level VCF folder containing rna samples")
+    parser.add_argument('--bam_path', required=False, help="Top level VCF folder containing bams")
+    parser.add_argument('--out_dir', required=False, default=".", help="output directory, DEFAULT='.'")
+    
     args = parser.parse_args()
-    vcf_path = getattr(args, "vcf_path")
+    
+    vcf_dna_path = getattr(args, "vcf_dna_path")
+    vcf_rna_path = getattr(args, "vcf_rna_path")
+    bam_path = getattr(args, "bam_path")
+    
+    out_dir = getattr(args, "out_dir")
     
     ## Read sample preparation file
     #### -> Read in each line of meta file 
@@ -26,7 +32,10 @@ def main():
     meta_dict_sorted = get_meta_dict(metafile_path)
     filename_prefixes = get_filname_prefixes(meta_dict_sorted)
     
-    # patient_match_counter = 0
+    vcf_rna_path="../../test_dir/vcf_annotated_rna/"
+    vcf_dna_path="../../test_dir/vcf_annotated_dna/"
+    bam_path = "../../test_dir/bams/"
+    gff_path = "../../../../local_scratch/ClINT/RawData/ref_genome.gff"
     
     ## Execute vartable
     #### -> Execute per patient
@@ -34,60 +43,33 @@ def main():
     #### -> Give file prefixes of RNA/DNA files to vartable executer as arguments
     #### -> Use information from sample preparation file
     
-    for patient in filename_prefixes:
-            if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
-                print("\n##############################", patient, "##############################")
-                execute_vartable(vcf_path, filename_prefixes[patient])
-                # patient_match_counter += 1
-            #break
-              
-    # print("Number of patients:", len(meta_dict_sorted))
-    # print("Number of DNA/RNA matches:", patient_match_counter)
-  
-
-def natural_sort_key(s):
-        def atoi(text):
-            return int(text) if text.isdigit() else text
-        return [atoi(c) for c in s.split()]
-
-def sort_dict_by_keys(dictionary):
-    sorted_items = sorted(dictionary.items(), key=lambda x: natural_sort_key(x[0]))
-    sorted_dict = dict(sorted_items)
-    return sorted_dict
-
-def execute_vartable(vcf_path, filename_prefixes):
-    # Get all directories below vcf_path
-    # directories = glob.glob(f'{vcf_path}/*/')
-
-    # for d in directories: print(d)
-    directory = "."
-
-    ## Command to run vartable.py
-    #### -> Define vartable arguments
-    cmd_list = [["python", "./vartable.py", "--dna", "../../test_dir/vcf_annotated_dna/", \
-                                            "--rna", "../../test_dir/vcf_annotated_rna/", \
-                                            "--bam", "../../test_dir/bams/", \
-                                            "--out", f'{directory}/vartable_output', \
-                                            "--gff", "../../../../local_scratch/ClINT/RawData/ref_genome.gff", \
-                                            "--gff_filter", "False", \
-                                            "--snpEff", "True", \
-                                            "--agreement", "True", \
-                                            "--dna_startswith", *filename_prefixes["DNA"], \
-                                            "--rna_startswith", *filename_prefixes["RNA"]] \
-                                                
-                                            ]# for directory in directories]
-
-    ## Collect commands, create Popen objects
-    # prc_list = [Popen(cmd, stdout=PIPE, stderr=PIPE) for cmd in cmd_list]
-    prc = Popen(cmd_list[0], universal_newlines=True)
-    return_code = prc.wait()
+    variants_dict_complete = {}
+    variants_dict_per_patient = {}
     
-    # # Execute each of the processes, enable console output
-    # for prc in prc_list:
-    #     stdout, stderr = prc.communicate()
-    #     print(stdout.decode('ascii'), stderr.decode())
-    #     prc.wait()
-    # subprocess.run(cmd_list[0], shell=True, capture_output=True, text=True)
+    for patient in filename_prefixes:
+        if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
+            print("\n##############################", patient, "##############################")
+            variants_dict_per_patient[patient] = execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_prefixes[patient], patient, out_dir)
+        break
+    
+    print("vardict from 2", variants_dict)
+
+def execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_prefixes, patient, output_dir):
+    
+    ## Command to run vartable.py
+    variants_dict = run_vartable(vcf_dna_path, \
+                                 vcf_rna_path, \
+                                 bam_path, \
+                                 f'{output_dir}/vartable_output', \
+                                 gff_path, \
+                                 patient, \
+                                 False, \
+                                 False, \
+                                 True, \
+                                 filename_prefixes["DNA"], \
+                                 filename_prefixes["RNA"])
+    
+    return variants_dict  
         
 def get_filname_prefixes(meta_dict_sorted):
     filename_prefixes = {}
@@ -135,5 +117,15 @@ def get_meta_dict(metafile_path):
                     meta_dict[patient_id] = {type: {sample_number: dict_entry}}        
             
     return sort_dict_by_keys(meta_dict)
+
+def natural_sort_key(s):
+        def atoi(text):
+            return int(text) if text.isdigit() else text
+        return [atoi(c) for c in s.split()]
+
+def sort_dict_by_keys(dictionary):
+    sorted_items = sorted(dictionary.items(), key=lambda x: natural_sort_key(x[0]))
+    sorted_dict = dict(sorted_items)
+    return sorted_dict
 
 main()

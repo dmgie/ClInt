@@ -2,57 +2,22 @@ from utils import *
 import os
 import csv
 import sys
-import argparse
-import pandas as pd
 
-if __name__ == "__main__":
+def run_vartable(dna_vcf, rna_vcf, bam, output_dir, gff, patient, gff_filtering, snpEff, agreement, dna_startswith, rna_startswith):
 
     dir_dict = {
-        "dna":"",
-        "rna":"",
-        "bam":"",
-        "out":"",
-        "gff":"",
-        "vcf":""
+        "dna":dna_vcf,
+        "rna":rna_vcf,
+        "bam":bam,
+        "out":output_dir,
+        "gff":gff
     }
-
-    #### Argument parsing
-
-    parser = argparse.ArgumentParser(description='Tool for comparative RNA/DNA variant analysis')
-
-    parser.add_argument('--dna', required=False, help='DNA input folder')
-    parser.add_argument('--vcf', required=False, help='VCF input folder')
-    parser.add_argument('--rna', required=False, help='RNA input folder')
-    parser.add_argument('--bam', required=False, help='BAM input folder')
-    parser.add_argument('--gff', required=False, help='GFF annotation file')
-    parser.add_argument('--out', required=False, help='Output folder')
-    parser.add_argument('--gff_filter', required=False, help='OPTIONAL: GFF filtering -> default: False', choices=["True", "False"], default=False)
-    parser.add_argument('--snpEff', required=False, help='OPTIONAL: snpEff annotation -> default: False', choices=["True", "False"], default=False)
-    parser.add_argument('--agreement', required=False, help='OPTIONAL: DNA / RNA variant agreement -> default: False', choices=["True", "False"], default=True)
-    parser.add_argument('--dna_startswith', required=False, nargs='*', help='OPTIONAL: specify dna naming scheme', default="haplotype_dedup_snc_trimmed")
-    parser.add_argument('--rna_startswith', required=False, nargs='*', help='OPTIONAL: specify rna naming scheme', default="S_aureus")
-
-    args = parser.parse_args()
-
-    for arg in vars(args):
-        if getattr(args, arg) != None and arg in dir_dict.keys():
-            dir_dict[arg] = getattr(args, arg)
-            
     
-
-    gff_filtering = string_to_bool(vars(args)["gff_filter"])
-    snpEff = string_to_bool(vars(args)["snpEff"])
-    agreement = string_to_bool(vars(args)["agreement"])
-    rna_startswith = vars(args)["rna_startswith"]
-    dna_startswith = vars(args)["dna_startswith"]
-    
-    print(f"\nStarting comparative .vcf analysis on files from sample: {dir_dict['vcf']}\n")
+    print(f"\nStarting comparative .vcf analysis on files from patient: {patient}\n")
     print(f"RNA files from {dir_dict['rna']}:", rna_startswith)
     print(f"DNA files from {dir_dict['dna']}:", dna_startswith)
 
     #### Initialization of variables
-    
-    
 
     variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
 
@@ -60,12 +25,14 @@ if __name__ == "__main__":
         print("\n>>>>>No matching dna/rna files found - quitting vartable analysis<<<<<")
         sys.exit()
 
-    dir_dict["out"] += f"/{dna_startswith[0]}"
+    patient = patient.replace(" ", "")
+    dir_dict["out"] += f"/{patient}"
     os.makedirs(f"{dir_dict['out']}", exist_ok=True)
+    os.makedirs(f"{dir_dict['out']}/featureCounts", exist_ok=True)
    
     gff_file_new = f"{dir_dict['out']}/gff_new.gff"
-    feature_counts_output = f"{dir_dict['out']}/fc_output.txt"
-    feature_counts_tpm = f"{dir_dict['out']}/fc_output_tpm.txt"
+    feature_counts_output = f"{dir_dict['out']}/featureCounts/fc_output.txt"
+    feature_counts_tpm = f"{dir_dict['out']}/featureCounts/fc_output_tpm.txt"
 
     bam_filenames = read_bam_filenames(dir_dict["bam"], rna_startswith)
     gff_lines = []
@@ -73,19 +40,16 @@ if __name__ == "__main__":
     bam_file_string = []
     output_lines = []
     agreement = {}
+    variants_dict = {}
 
-    matching_count = 0
+    matching_count = 0 
     total_count = 0
     dna_count = 0
     rna_count = 0
 
     ## Starting comparative .vcf analysis
-    
-    sample_basename = os.path.basename(dir_dict["vcf"][:-1])
-    
-    print("starting analysis of", sample_basename)
     ## Create writeable output .tsv file, write header line
-    with open(f'./{dir_dict["out"]}/{dna_startswith[0]}_vartable_output.tsv', 'wt') as out_file:
+    with open(f'./{dir_dict["out"]}/{patient}_vartable_output.tsv', 'wt') as out_file:
         tsv_writer = csv.writer(out_file, delimiter='\t')
         tsv_writer.writerow(['Gene_ID', "Gene_Name", "Chromosome", 'Start', 'End', 'Variant_Position', 'Extension', 'REF', "DNA_ALT", "RNA_ALT", "Counts_Alt", "Counts_TPM", "Annotation"])
         
@@ -151,7 +115,7 @@ if __name__ == "__main__":
 
 
         ## Create DNA / RNA agreement output file
-        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"], dna_startswith[0])
+        if agreement: create_agreement(agreement, dna_count, rna_count, matching_count, dir_dict["out"], patient)
 
         ## Run featureCounts to get read counts per feature (gene)
         #### -> only on features that contain at least one variant position
@@ -174,7 +138,7 @@ if __name__ == "__main__":
         #### -> Make samples directly comparable
         #### -> Print to featureCoults-like file
 
-        calculate_tpm(feature_counts_output, dir_dict["out"]) 
+        calculate_tpm(feature_counts_output, dir_dict["out"]+"/featureCounts") 
 
         ## Generate TSV output file
         #### -> File contains one position per line, matching in position
@@ -187,11 +151,11 @@ if __name__ == "__main__":
             ## Get read information from featureCounts output file
             if line["out"]["gene_id"] != 'No_Annotation_Found':
             
+                # print("######", line, output_lines)
                 alternative = get_alt_files(list(line["files"].keys()), dir_dict["bam"])
                 
                 ## Counts for variant matching files
                 for file in line["files"]:
-                    # print("###FILE", file)
                     line["out"]["counts_tpm"] += line["files"][file] + ":" + \
                             str(get_expression_count(feature_counts_tpm, \
                             line["out"]["gene_id"].replace("_gene", ""), \
@@ -202,9 +166,15 @@ if __name__ == "__main__":
                     line["out"]["counts_alt"].append( int(get_expression_count(feature_counts_tpm, \
                             line["out"]["gene_id"].replace("_gene", ""), \
                             dir_dict["bam"] + remove_prefix_and_suffix(file))))
+                    
+                pos = line["out"]["var_pos"]
+                chrom = line["out"]["chromosome"]
                 
-                # if len(line["out"]["counts_alt"]) != 0: line["out"]["counts_alt"] = int(round(sum(line["out"]["counts_alt"])/len(line["out"]["counts_alt"]),0))
-
+                variant = line["out"]["var_pos"]
+                    
+                variants_dict[chrom+":"+str(pos)] = {"variant": line["out"]["rna_alt"]}
+                variants_dict[chrom+":"+str(pos)].update({"counts":  line["out"]["counts_tpm"].rsplit(',', maxsplit=1)[0]})
+                
             ## Add / character if no matching annotation feature is found 
             elif line["out"]["gene_id"] == 'No_Annotation_Found':
                 line["out"]["counts_tpm"] = "/"
@@ -220,6 +190,7 @@ if __name__ == "__main__":
     if matching_count != 0:
         print(f"\nCounted {matching_count} dna/rna variant position matches, {total_count} variant_positions in total ({round(matching_count/total_count,2)}).")
         print(f"Generated meta variant comparison output file at './{dir_dict['out']}/output.tsv'")
-    else:
-        print("No (matching) variants found")
+
     if agreement: print(f"Generated dna/rna agreement output file at './{dir_dict['out']}/agreement.tsv'")
+    
+    return variants_dict

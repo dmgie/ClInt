@@ -1,3 +1,0 @@
-Gene_ID	Gene_Name	Chromosome	Start	End	Variant_Position	Extension	REF	DNA_ALT	RNA_ALT	Counts_Alt	Counts_TPM	Annotation
-ACCFDFCE_00647_gene	None	1	689167	689610	689306	.	C	TOT:1 T:1.0	TOT:1 T:1.0	[]	T:3651	T|upstream_gene_variant|MODIFIER|RP11-206L10.3|ENSG00000235373|transcript|ENST00000416385|lincRNA||n.-3910G>A|||||3910|
-ACCFDFCE_01589_gene	citZ	1	1665410	1666456	1666529	+	T	TOT:1 C:1.0	TOT:3 C:1.0	[]	C:5534,C:6669,C:1412	C|upstream_gene_variant|MODIFIER|RP1-283E3.4|ENSG00000227775|transcript|ENST00000418950|transcribed_processed_pseudogene||n.-727T>C|||||727|

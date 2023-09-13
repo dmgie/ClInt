@@ -26,6 +26,7 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
                         if file.startswith(prefix):
                             prefix_to_files[type][prefix].append(os.path.join(root.decode(), file))
                             if use_snpeff: 
+                                print("START SNPEFF")
                                 snpeff(directories[type]+file, directories["out"])
                                 directory = os.fsencode(directories["out"]+"/vcf_annotated/")
                                 file+=".ann.vcf"
@@ -61,11 +62,8 @@ def search_vcf_position_matches(directories, dna_startswith, rna_startswith, use
             return None
 
 def read_bam_filenames(bam_path, prefix):
-
-
     bam_files = []
     for bam_file in os.listdir(bam_path):
-        # bam_file = os.fsencode(bam_file).decode()
         if bam_file.endswith(".bam") and bam_file.startswith(tuple(prefix)):
             bam_files.append(bam_file)
 
@@ -273,12 +271,13 @@ def create_agreement(agreement, dna_count, rna_count, matching_count, output, sa
     with open(f"{output}/{sample_name}_agreement.tsv", 'w', encoding='utf-8') as file:
         header = "####Agreement rate: proportion of dna variants also found in rna per rna .vcf file "
         header += f"RNA_COUNT: {rna_count} DNA_COUNT: {dna_count} MATCHING: {matching_count}\n"
-        header += "####vcf_filename\tagreement_rate\n"
+        header += "####vcf_filename\tagreement_rate_dna\tagreement_rate_rna\n"
         file.write(header)
 
         for filename in agreement:
-            agreement[filename] = round(agreement[filename]/dna_count, 2)
-            file.write(filename + "\t" + str(agreement[filename]) + "\n")
+            agreement_dna = round(agreement[filename]/dna_count, 2)
+            agreement_rna = round(agreement[filename]/rna_count, 2)
+            file.write(filename + "\t" + str(agreement_dna) + "\t" + str(agreement_rna) + "\n")
 
 def snpeff(path, out):
     print(f"Start: SNPEff analysis for {path}.")
