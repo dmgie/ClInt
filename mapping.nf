@@ -114,30 +114,15 @@ process STAR_BUILD {
     def extension_args = annotation.extension == "gtf" ? "" :
         "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
 
-    // TODO: Modify it to be a single command but with ext_args
-    if (extension == 'gtf') {
-        """
-            echo "GTF file detected"
-            STAR --runThreadN ${task.cpus} \
-            --runMode genomeGenerate \
-            --genomeDir . \
-            --genomeFastaFiles $ref_file \
-            --sjdbGTFfile $annotation \
-            --sjdbOverhang \$(($READ_LENGTH - 1))
-        """
-    } else {
-        """
-            echo "GFF file detected"
-            STAR --runThreadN ${task.cpus} \
-            --runMode genomeGenerate \
-            --genomeDir . \
-            --genomeFastaFiles $ref_file \
-            --sjdbGTFfile $annotation \
-            --sjdbGTFtagExonParentTranscript Parent \
-            --sjdbGTFfeatureExon $feature \
-            --sjdbOverhang \$(($READ_LENGTH - 1))
-        """
-    }
+    """
+    echo "GTF file detected"
+    STAR --runThreadN ${task.cpus} \
+        --runMode genomeGenerate \
+        --genomeDir . \
+        --genomeFastaFiles $ref_file \
+        --sjdbGTFfile $annotation \
+        --sjdbOverhang \$(($READ_LENGTH - 1)) ${extension_args}
+    """
 
     stub:
     """
