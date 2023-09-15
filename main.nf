@@ -25,8 +25,19 @@ def CHECKPARAMS() {
         error "ERROR: gff_file is not set"
     } else {
         println "All parameters are set"
-        println "   User ID:\t ${params.USER_ID}"
-        println "   Group ID:\t ${params.GROUP_ID}"
+        println "  Input Directory  : $params.input_dir"
+        println "  Output Directory : $params.output_dir"
+        println "  Reference Dir    :  $params.reference_dir"
+        println "  Reference file   : $params.reference_file"
+        println "  GFF file         :  $params.gff_file"
+        println "  Number of cores  :  $params.max_memory"
+        println "  Max memory       :  $params.max_memory"
+        println "  Genome Index     :  $params.genome_index"
+        println "  Known SNPs       :  $params.known_sites"
+        println "  Paired?          :  $params.paired"
+        println "  Strandedness     :  $params.strandedness"
+        println "  R1 Pattern       : $params.r1_pattern"
+        println "  R2 Pattern       : $params.r2_pattern"
     }
 }
 
@@ -36,11 +47,13 @@ workflow {
     // Input Reads; {gz,bz2} needed since sometimes naming is bad i.e .gz.normalised.vcf != read file
     // TODO: Either format unpaired to be in the same format as paired i.e tuple val(x), path(read)
     //       OR let each process accept a val(x) and then on each process determine whether its a tuple
+
     if (params.paired) {
         // TODO: placing the "." inside i.e  [.gz|.bz2] causes it to not function?
         // FIXME: the input_dir/**/files_here makes it so it has to be in sub-dirs. Make it also take ones that are directly
         // in the dir i.e input_dir/files_here
-        INPUT_READS = Channel.fromFilePairs("${params.input_dir}/**/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
+        // INPUT_READS = Channel.fromFilePairs("${params.input_dir}/**/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
+        INPUT_READS = Channel.fromFilePairs("${params.input_dir}/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
                                             type: 'file',
                                             maxDepth: 5)
     } else {
