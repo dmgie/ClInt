@@ -132,8 +132,8 @@ process STAR_BUILD {
 
 process STAR {
     label 'mapping'
-    publishDir "${params.output_dir}/star_summaries", mode: 'copy', pattern: '*.final.out'
-    publishDir "${params.output_dir}/aligned_bams", mode: 'copy', pattern: '*.bam'
+    publishDir "${params.output_dir}/star_log/${sample_id}/", mode: 'copy', pattern: '*.{final,progress, [ ]}out'
+    // publishDir "${params.output_dir}/aligned_bams/${sample_id}", mode: 'copy', pattern: '*.bam'
 
     input:
         tuple val(sample_id), path(reads)
