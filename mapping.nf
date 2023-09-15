@@ -26,7 +26,6 @@ process SAMTOOLS_INDEX {
     label 'mapping'
     input:
         tuple val(sample_id), path(bam_file)
-
     // TODO: Do we have *.bai and bam separate or as one?
     // As one would make more sense?
     output:
@@ -162,19 +161,22 @@ process STAR {
     // No strand-specific options needed here
     def (read1,read2) = [reads[0], reads[1]]
     def SAM_HEADER = "ID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
-    def arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
+    def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
                                     "--readFilesIn ${read1}"
-
+    // --outSAMmapqUnique 60 // STAR default MAPQ is 255, GATK interprets 255 as failed therefore make it 60, so GATK inteprets not as failed
+    // #--readFilesIn ${reads} \
+    // --readFilesIn ${arguments} \
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
-    --genomeDir . \
-    --readFilesIn ${reads} \
-    --readFilesCommand zcat \
-    --outSAMtype BAM SortedByCoordinate \
-    --outFileNamePrefix ${sample_id}_ \
-    --outSAMattrRGline $SAM_HEADER \
-    --limitBAMsortRAM 10000000000
+        --genomeDir . \
+        --readFilesCommand zcat \
+        --outSAMtype BAM SortedByCoordinate \
+        --outFileNamePrefix ${sample_id}_ \
+        --outSAMattrRGline $SAM_HEADER \
+        --outSAMmapqUnique 60 \
+        --limitBAMsortRAM 10000000000 \
+        ${read_arguments}
 
     # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
     mv ${sample_id}_*.bam ${sample_id}.bam
