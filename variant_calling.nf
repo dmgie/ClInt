@@ -1,8 +1,11 @@
 include { SAMTOOLS_INDEX } from './mapping'
 include { SAMTOOLS_SORT } from './mapping'
-include { MergeOrientationModel } from './variant_processing'
-include { MergeMutectStats } from './variant_processing'
-include { FilterMutect } from './variant_processing'
+include { VARIANT_PREPROCESSING } from './variant_preprocessing'
+include { IndexVCF } from './variant_preprocessing'
+include { MergeOrientationModel } from './variant_filtering'
+include { MergeMutectStats } from './variant_filtering'
+include { FilterMutect } from './variant_filtering'
+
 
 process REF_AUXILLARY {
     // Creation of .fai/.dict files for GATK
@@ -58,6 +61,7 @@ process MarkDuplicates {
 
 process SplitNCigarReads {
     label 'variant_calling'
+    label 'forking_heavy'
     input:
         tuple val(sample_id), path(bam), path(bai)
         path ref_fai
@@ -75,7 +79,7 @@ process SplitNCigarReads {
         interval_args += " -L ${chr}"
         name += "${chr}_"
     }
-    println "Processing SplitNCigarReads for ${interval_args} for ${sample_id}"
+    // println "Processing SplitNCigarReads for ${interval_args} for ${sample_id}"
 
     """
     echo "Working on ${bam}"
@@ -88,8 +92,10 @@ process SplitNCigarReads {
     """
 }
 
+
 process Mutect2 {
     label 'variant_calling'
+    label 'forking_heavy'
     input:
         tuple val(sample_id), path(split_bam), path(bai)
         path ref_fai
@@ -110,14 +116,14 @@ process Mutect2 {
         name += "${chr}_"
     }
 
-    println "Processing mutect2 in interval ${interval_args}"
+    // println "Processing mutect2 in interval ${interval_args}"
 
     """
     echo "Working on ${split_bam}"
     gatk --java-options '-Xmx4G -XX:+UseParallelGC -XX:ParallelGCThreads=${task.cpus}' Mutect2 \
         --pair-hmm-implementation FASTEST_AVAILABLE \
-        --native-pair-hmm-threads ${task.cpus} \
         --smith-waterman FASTEST_AVAILABLE \
+        --native-pair-hmm-threads ${task.cpus} \
         -R ${ref} \
         -I ${split_bam} \
         --f1r2-tar-gz f1r2_${name}.tar.gz \
@@ -177,8 +183,6 @@ workflow VARIANT_CALLING {
         sorted_index_bam // Sample ID + BAM/BAI
         ref
     main:
-
-
         // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
         // 1. Defining chromosomal intervals (sets of size i.e 3)
         // 3. BAM -> Merged Bam & VCF files for each interval, collect
@@ -197,17 +201,25 @@ workflow VARIANT_CALLING {
         groups = Channel.fromList(chromosomes).collate(group_size)
         groups.view()
 
-        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
+        // Create .fai/.dict files that need to be used in the next steps
         REF_AUXILLARY(ref)
+
+        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         bam_split_n = SplitNCigarReads(sorted_index_bam,
                                        REF_AUXILLARY.out.fai,
                                        REF_AUXILLARY.out.dict,
                                        REF_AUXILLARY.out.ref,
-                                       groups) // or [chromosomes]
-        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+                                       groups)
+                        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
 
-        Mutect2(bam_split_n,
+        // bam_split_n = BAM_PREPROCESSING(sorted_index_bam, REF_AUXILLARY, [groups, num_lists])
+
+        // recalibrated = VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
+        recalibrated = bam_split_n
+
+        // Mutect2(bam_split_n,
+        Mutect2(recalibrated,
                 REF_AUXILLARY.out.fai,
                 REF_AUXILLARY.out.dict,
                 REF_AUXILLARY.out.ref,
@@ -218,12 +230,11 @@ workflow VARIANT_CALLING {
         vcfs = Mutect2.out.vcfs.groupTuple(size: num_lists) | MergeVcfs
         f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
         stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
-        // vcfs.view()
-        // f1r2.view()
-        // stats.view()
 
+
+        // FILTERING
         // Group all needed files together by sample_id and send to Filtering process
-        sample_grouped = vcfs.concat(f1r2,stats).groupTuple()
+        sample_grouped = vcfs.concat(f1r2,stats).groupTuple(size: 3)
         FilterMutect(sample_grouped,
                     REF_AUXILLARY.out.fai,
                     REF_AUXILLARY.out.dict,
@@ -232,7 +243,7 @@ workflow VARIANT_CALLING {
 
     // haplotype_vcf
     // emit:
-    //     Mutect2.out
+    //     FilterMutect.out
 }
 
 // TODO: Avoid sending tuple from sorted_index_bam to all the others (since some of them require )
