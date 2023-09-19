@@ -1,5 +1,0 @@
-####Agreement rate: proportion of dna variants also found in rna per rna .vcf file RNA_COUNT: 52 DNA_COUNT: 10 MATCHING: 2
-####vcf_filename	agreement_rate_dna	agreement_rate_rna
-20096b001_dedup_snc_trimmed_Q12SA022AP_20211014141226__2109SHr1022_10_S22_R1_001.bam.ann.vcf	0.2	0.04
-20096b089_dedup_snc_trimmed_Q12SA024A7_20211014141226__2109SHr1024_12_S24_R1_001.bam.ann.vcf	0.1	0.02
-20096b044_dedup_snc_trimmed_Q12SA023AX_20211014141226__2109SHr1023_11_S23_R1_001.bam.ann.vcf	0.1	0.02

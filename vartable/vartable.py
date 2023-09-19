@@ -18,12 +18,14 @@ def run_vartable(dna_vcf, rna_vcf, bam, output_dir, gff, patient, gff_filtering,
     print(f"DNA files from {dir_dict['dna']}:", dna_startswith)
 
     #### Initialization of variables
+    
+    
 
     variant_positions = search_vcf_position_matches(dir_dict, dna_startswith, rna_startswith, snpEff)
 
     if variant_positions == None:
         print("\n>>>>>No matching dna/rna files found - quitting vartable analysis<<<<<")
-        return None
+        return {}
 
     patient = patient.replace(" ", "")
     dir_dict["out"] += f"/{patient}"

@@ -1,5 +1,7 @@
 import argparse
+import json
 from vartable import *
+from patient_vectorization import *
 
 ## File handler for vartable.py - COVID dataset
 #### -> Enables parallel processing of variant samples using Popen
@@ -33,10 +35,11 @@ def main():
     meta_dict_sorted = get_meta_dict(metafile_path)
     filename_prefixes = get_filname_prefixes(meta_dict_sorted)
     
-    # vcf_rna_path="../../test_dir/vcf_annotated_rna/"
-    # vcf_dna_path="../../test_dir/vcf_annotated_dna/"
-    # bam_path = "../../test_dir/bams/"
-    gff_path = "./gencode.v44.chr_patch_hapl_scaff.annotation.gff"
+    vcf_rna_path="../../test_dir/vcf_annotated_rna/"
+    vcf_dna_path="../../test_dir/vcf_annotated_dna/"
+    bam_path = "../../test_dir/bams/"
+    # gff_path = "./gencode.v44.chr_patch_hapl_scaff.annotation.gff"
+    gff_path = "../../../../local_scratch/ClINT/RawData/ref_genome.gff"
     
     ## Execute vartable
     #### -> Execute per patient
@@ -47,16 +50,24 @@ def main():
     variants_dict_complete = {}
     variants_dict_per_patient = {}
     
-    
-    
     for patient in filename_prefixes:
-        print("#####", patient)
         if "DNA" in filename_prefixes[patient] and "RNA" in filename_prefixes[patient]:
             print("\n##############################", patient, "##############################")
-            variants_dict_per_patient[patient] = execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_prefixes[patient], patient, out_dir)
-        # break
+            
+            vartable_results = execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_prefixes[patient], patient, out_dir)
+            
+            variants_dict_per_patient[patient] = vartable_results
+            variants_dict_complete.update(vartable_results)
     
-    # print("vardict from 2", variants_dict_per_patient)
+    patient_vectors = create_patient_vectors(variants_dict_complete, variants_dict_per_patient)
+    save_patient_vectors(patient_vectors, out_dir)
+
+    # max, min = get_max_min_counts(patient_vectors)
+    # print("MAX", max,"MIN", min)
+
+    # dis = get_position_distance(patient_vectors["Patient 1"], patient_vectors["Patient 2"], "1:1666529", max["1:1666529"]-min["1:1666529"])
+
+    # print("DIS", dis)
 
 def execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_prefixes, patient, output_dir):
     
@@ -74,6 +85,11 @@ def execute_vartable(vcf_dna_path, vcf_rna_path, bam_path, gff_path, filename_pr
                                  filename_prefixes["RNA"])
     
     return variants_dict  
+
+def save_patient_vectors(patient_vectors, out_dir):
+    with open(f"{out_dir}/vartable_output/patient_vectors.txt", "w") as out_file:
+        json.dump(patient_vectors, out_file, indent=4)
+
         
 def get_filname_prefixes(meta_dict_sorted):
     filename_prefixes = {}

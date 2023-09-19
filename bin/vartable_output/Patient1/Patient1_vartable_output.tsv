@@ -1,3 +1,0 @@
-Gene_ID	Gene_Name	Chromosome	Start	End	Variant_Position	Extension	REF	DNA_ALT	RNA_ALT	Counts_Alt	Counts_TPM	Annotation
-ACCFDFCE_00647_gene	None	1	689167	689610	689306	.	C	TOT:1 T:1.0	TOT:1 T:1.0	[]	T:3651	/
-ACCFDFCE_01589_gene	citZ	1	1665410	1666456	1666529	+	T	TOT:1 C:1.0	TOT:3 C:1.0	[]	C:5534,C:6669,C:1412	/
