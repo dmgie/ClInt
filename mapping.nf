@@ -132,7 +132,8 @@ process STAR_BUILD {
 
 process STAR {
     label 'mapping'
-    publishDir "${params.output_dir}/star_log/${sample_id}/", mode: 'copy', pattern: '*.{final,progress, [ ]}out'
+    publishDir "${params.output_dir}/star_mapping/", mode: 'symlink', pattern: '*.bam'
+    publishDir "${params.output_dir}/star_log/", mode: 'copy', pattern: '*.{final,SJ}*'
     // publishDir "${params.output_dir}/aligned_bams/${sample_id}", mode: 'copy', pattern: '*.bam'
 
     input:
@@ -140,17 +141,15 @@ process STAR {
         path ref_idx
 
     output:
-        tuple val(sample_id),  path("*.bam")
+    tuple val(sample_id),  path("*.bam"), emit: bam
+    path "*{final,SJ}*", emit: logs
 
     script:
     // No strand-specific options needed here
     def (read1,read2) = [reads[0], reads[1]]
-    def SAM_HEADER = "ID:aligned_${reads}\tSM:None\tLB:None\tPL:Illumina"
+    def SAM_HEADER = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
     def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
                                     "--readFilesIn ${read1}"
-    // --outSAMmapqUnique 60 // STAR default MAPQ is 255, GATK interprets 255 as failed therefore make it 60, so GATK inteprets not as failed
-    // #--readFilesIn ${reads} \
-    // --readFilesIn ${arguments} \
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
