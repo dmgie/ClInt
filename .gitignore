@@ -6,3 +6,6 @@
 /clint.sif
 /workflow_output
 /.mailmap
+/slurm.error
+/slurm.out
+/flowchart.png
