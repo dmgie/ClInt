@@ -66,7 +66,6 @@ workflow {
     // INPUT_READS.filter { !it[0].startsWith("FO")  }
     // INPUT_READS.view()
 
-
     QC_READS = QUALITYCONTROL(INPUT_READS)
     MAPPING(QC_READS, REFERENCE)
     VARIANT_CALLING(MAPPING.out, REFERENCE) // Places files in output folder

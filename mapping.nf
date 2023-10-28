@@ -125,6 +125,7 @@ process HISAT2 {
 }
 
 process STAR_BUILD {
+    // NOTE: REMOVE v37 ONCE PATIENT HAS RUN THROUGH
     publishDir "${params.output_dir}/star_index", mode: 'copy', pattern: '*'
     label 'mapping'
     input:
@@ -139,7 +140,6 @@ process STAR_BUILD {
     def extension = annotation.extension // Remove this when changing to *_args
     def extension_args = annotation.extension == "gtf" ? "" :
         "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
-
     """
     echo "GTF file detected"
     STAR --runThreadN ${task.cpus} \
