@@ -1,5 +1,32 @@
 include { SAMTOOLS_INDEX } from './mapping';
 
+
+workflow VARIANT_PREPROCESSING {
+    take:
+        bam_bai
+        ref_files
+    main:
+    // TODO: Check if for each of the VCF in params.known_sites theres a tbi file
+    // otherwise create it
+    // def known_sites = Channel.fromFilePairs("${params.known_sites}")
+        vcfs = Channel.fromPath(params.known_sites)
+        list = IndexVCF(vcfs).collect()
+
+        CalculateRecalibration(bam_bai,
+                            list,
+                            ref_files.out.fai,
+                            ref_files.out.dict,
+                            ref_files.out.ref)
+
+        recalibrated = ApplyRecalibration(CalculateRecalibration.out,
+                        ref_files.out.fai,
+                        ref_files.out.dict,
+                        ref_files.out.ref) | SAMTOOLS_INDEX
+    emit:
+        recalibrated
+}
+
+
 process CalculateRecalibration {
     input:
         tuple val(sample_id), path(bam), path(bai)
@@ -59,29 +86,4 @@ process IndexVCF {
     """
     gatk IndexFeatureFile -I ${vcf};
     """
-}
-
-workflow VARIANT_PREPROCESSING {
-    take:
-        bam_bai
-        ref_files
-    main:
-    // TODO: Check if for each of the VCF in params.known_sites theres a tbi file
-    // otherwise create it
-    // def known_sites = Channel.fromFilePairs("${params.known_sites}")
-        vcfs = Channel.fromPath(params.known_sites)
-        list = IndexVCF(vcfs).collect()
-
-        CalculateRecalibration(bam_bai,
-                            list,
-                            ref_files.out.fai,
-                            ref_files.out.dict,
-                            ref_files.out.ref)
-
-        recalibrated = ApplyRecalibration(CalculateRecalibration.out,
-                        ref_files.out.fai,
-                        ref_files.out.dict,
-                        ref_files.out.ref) | SAMTOOLS_INDEX
-    emit:
-        recalibrated
 }
