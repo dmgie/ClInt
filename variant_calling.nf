@@ -6,6 +6,74 @@ include { MergeOrientationModel } from './variant_filtering'
 include { MergeMutectStats } from './variant_filtering'
 include { FilterMutect } from './variant_filtering'
 
+workflow VARIANT_CALLING {
+    take:
+        sorted_index_bam // Sample ID + BAM/BAI
+        ref
+    main:
+        // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
+        // 1. Defining chromosomal intervals (sets of size i.e 3)
+        // 3. BAM -> Merged Bam & VCF files for each interval, collect
+        // 4. Merge collected intervals
+        def group_size = 5 // How many intervals each GATK command should take
+        def chromosomes = (1..21) + ['X', 'Y']
+
+        // NOTE: This (along with the "size: num_lists") parameter allows nextflow to know
+        // how many elements to expect for each sample_id. This allows it know when it can start
+        // the next process much faster rather than waiting on the current one for all to finish
+        // If we have 23 chromosomes, and pair them in 2's, we have at the end 12 intervals, so we supply "12" to the
+        // "size" parameter in "groupTuple"
+        def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
+        println num_lists
+
+        groups = Channel.fromList(chromosomes).collate(group_size)
+        groups.view()
+
+        REF_AUXILLARY(ref)
+
+        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
+        bam_split_n = SplitNCigarReads(sorted_index_bam,
+                                       REF_AUXILLARY.out.fai,
+                                       REF_AUXILLARY.out.dict,
+                                       REF_AUXILLARY.out.ref,
+                                       groups)
+                        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+
+
+        // bam_split_n = BAM_PREPROCESSING(sorted_index_bam, REF_AUXILLARY, [groups, num_lists])
+
+    // NOTE: The bams can either be the same or recalibrated, we have it uncalibrated
+        // recalibrated = VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
+        recalibrated = bam_split_n
+
+        // Mutect2(bam_split_n,
+        Mutect2(recalibrated,
+                REF_AUXILLARY.out.fai,
+                REF_AUXILLARY.out.dict,
+                REF_AUXILLARY.out.ref,
+                groups)
+
+        // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
+        // vcfs & f1r2, to be merged. So each of these outputs will give 1vcf,1tar,1stats for each sample
+        vcfs = Mutect2.out.vcfs.groupTuple(size: num_lists) | MergeVcfs
+        f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
+        stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
+
+
+        // FILTERING
+        // Group all needed files together by sample_id and send to Filtering process
+        sample_grouped = vcfs.concat(f1r2,stats).groupTuple(size: 3)
+        FilterMutect(sample_grouped,
+                    REF_AUXILLARY.out.fai,
+                    REF_AUXILLARY.out.dict,
+                    REF_AUXILLARY.out.ref)
+
+
+    // haplotype_vcf
+    // emit:
+    //     FilterMutect.out
+}
+
 
 process REF_AUXILLARY {
     // Creation of .fai/.dict files for GATK
@@ -176,74 +244,6 @@ process MergeVcfs {
     """
     gatk MergeVcfs ${allVCFs} -O merged_${sample_id}.vcf
     """
-}
-
-workflow VARIANT_CALLING {
-    take:
-        sorted_index_bam // Sample ID + BAM/BAI
-        ref
-    main:
-        // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
-        // 1. Defining chromosomal intervals (sets of size i.e 3)
-        // 3. BAM -> Merged Bam & VCF files for each interval, collect
-        // 4. Merge collected intervals
-        def group_size = 5 // How many intervals each GATK command should take
-        def chromosomes = (1..21) + ['X', 'Y']
-
-        // NOTE: This (along with the "size: num_lists") parameter allows nextflow to know
-        // how many elements to expect for each sample_id. This allows it know when it can start
-        // the next process much faster rather than waiting on the current one for all to finish
-        // If we have 23 chromosomes, and pair them in 2's, we have at the end 12 intervals, so we supply "12" to the
-        // "size" parameter in "groupTuple"
-        def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
-        println num_lists
-
-        groups = Channel.fromList(chromosomes).collate(group_size)
-        groups.view()
-
-        // Create .fai/.dict files that need to be used in the next steps
-        REF_AUXILLARY(ref)
-
-        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
-        bam_split_n = SplitNCigarReads(sorted_index_bam,
-                                       REF_AUXILLARY.out.fai,
-                                       REF_AUXILLARY.out.dict,
-                                       REF_AUXILLARY.out.ref,
-                                       groups)
-                        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
-
-
-        // bam_split_n = BAM_PREPROCESSING(sorted_index_bam, REF_AUXILLARY, [groups, num_lists])
-
-        // recalibrated = VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
-        recalibrated = bam_split_n
-
-        // Mutect2(bam_split_n,
-        Mutect2(recalibrated,
-                REF_AUXILLARY.out.fai,
-                REF_AUXILLARY.out.dict,
-                REF_AUXILLARY.out.ref,
-                groups)
-
-        // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
-        // vcfs & f1r2, to be merged. So each of these outputs will give 1vcf,1tar,1stats for each sample
-        vcfs = Mutect2.out.vcfs.groupTuple(size: num_lists) | MergeVcfs
-        f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
-        stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
-
-
-        // FILTERING
-        // Group all needed files together by sample_id and send to Filtering process
-        sample_grouped = vcfs.concat(f1r2,stats).groupTuple(size: 3)
-        FilterMutect(sample_grouped,
-                    REF_AUXILLARY.out.fai,
-                    REF_AUXILLARY.out.dict,
-                    REF_AUXILLARY.out.ref)
-
-
-    // haplotype_vcf
-    // emit:
-    //     FilterMutect.out
 }
 
 // TODO: Avoid sending tuple from sorted_index_bam to all the others (since some of them require )
