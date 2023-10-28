@@ -43,6 +43,7 @@ RUN apt-get -qq update && apt-get -qq -y install \
     nano \
     perl \
     pkg-config \
+    python2 \
     python3 \
     python3-dev \
     python3-distutils \
