@@ -1,3 +1,29 @@
+
+
+
+workflow MAPPING {
+    take:
+        reads
+        ref_file
+    main:
+        ANNOTATION = Channel.fromPath(params.gff_file)
+        mapping_method = params.mapping.toLowerCase()
+        if (mapping_method == "hisat2") {
+            ref_idx = HISAT_BUILD(ref_file).collect()
+            sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
+        } else if (mapping_method == "star") {
+            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, ANNOTATION).collect()
+            sorted_index_bams = STAR(reads,ref_idx)
+            sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
+        } else {
+            println "ERROR: Mapping method not recognised"
+        }
+
+    emit:
+    sorted_index_bams // tuple sample_id, bam and bai
+}
+
+
 process SAMTOOLS_SORT {
     label 'mapping'
     input:
@@ -172,26 +198,10 @@ process STAR {
     """
 }
 
-
-workflow MAPPING {
-    take: 
-        reads
-        ref_file
-    main:
-        ANNOTATION = Channel.fromPath(params.gff_file)
-        mapping_method = params.mapping.toLowerCase()
-        if (mapping_method == "hisat2") {
-            ref_idx = HISAT_BUILD(ref_file).collect() 
-            sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
-        } else if (mapping_method == "star") {
-        ref_idx = params.genome_index != '' ?
-            Channel.fromPath("${params.genome_index}/*").collect() :
-            STAR_BUILD(ref_file, ANNOTATION).collect()
-
-            sorted_index_bams = STAR(reads,ref_idx) | SAMTOOLS_INDEX
-        } else {
-            println "ERROR: Mapping method not recognised"
-        }
-    emit:
-        sorted_index_bams // tuple sample_id, bam and bai
-}
+// process BamQC {
+//     input:
+//     output:
+//     script:
+//     """
+//     """
+// }
