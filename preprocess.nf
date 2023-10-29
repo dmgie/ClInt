@@ -20,7 +20,7 @@ process FASTP {
     """
 }
 
-workflow QUALITYCONTROL {
+workflow PREPROCESS {
     take:
         reads
     main:
