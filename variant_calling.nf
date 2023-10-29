@@ -1,56 +1,39 @@
 include { SAMTOOLS_INDEX } from './mapping'
 include { SAMTOOLS_SORT } from './mapping'
 include { VARIANT_PREPROCESSING } from './variant_preprocessing'
-include { IndexVCF } from './variant_preprocessing'
-include { MergeOrientationModel } from './variant_filtering'
-include { MergeMutectStats } from './variant_filtering'
-include { FilterMutect } from './variant_filtering'
 
 workflow VARIANT_CALLING {
     take:
         sorted_index_bam // Sample ID + BAM/BAI
         ref
     main:
-        // NOTE: Each sample_id (i.e paired-end pair) gets processed by:
-        // 1. Defining chromosomal intervals (sets of size i.e 3)
-        // 3. BAM -> Merged Bam & VCF files for each interval, collect
-        // 4. Merge collected intervals
         def group_size = 5 // How many intervals each GATK command should take
         def chromosomes = (1..21) + ['X', 'Y']
-
-        // NOTE: This (along with the "size: num_lists") parameter allows nextflow to know
-        // how many elements to expect for each sample_id. This allows it know when it can start
-        // the next process much faster rather than waiting on the current one for all to finish
-        // If we have 23 chromosomes, and pair them in 2's, we have at the end 12 intervals, so we supply "12" to the
-        // "size" parameter in "groupTuple"
         def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
-        println num_lists
-
         groups = Channel.fromList(chromosomes).collate(group_size)
-        groups.view()
 
+        // Create .dict and .fai files for reference fasta file
         REF_AUXILLARY(ref)
 
-        // This would launch 8 (Processes|Groups) * 2 (Chromosomes at a time) * 6 (Cores per process) ~=144 cores
         bam_split_n = SplitNCigarReads(sorted_index_bam,
                                        REF_AUXILLARY.out.fai,
                                        REF_AUXILLARY.out.dict,
-                                       REF_AUXILLARY.out.ref,
+                                       ref,
                                        groups)
-                        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
 
 
         // bam_split_n = BAM_PREPROCESSING(sorted_index_bam, REF_AUXILLARY, [groups, num_lists])
 
-    // NOTE: The bams can either be the same or recalibrated, we have it uncalibrated
-        // recalibrated = VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
-        recalibrated = bam_split_n
+        // NOTE: The bams can either be the same or recalibrated, we have it uncalibrated
+        // recalibrated =
+        recalibrated = bam_split_n // OR VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
 
         // Mutect2(bam_split_n,
         Mutect2(recalibrated,
                 REF_AUXILLARY.out.fai,
                 REF_AUXILLARY.out.dict,
-                REF_AUXILLARY.out.ref,
+                ref,
                 groups)
 
         // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
@@ -59,14 +42,13 @@ workflow VARIANT_CALLING {
         f1r2 = Mutect2.out.f1r2.groupTuple(size: num_lists) | MergeOrientationModel
         stats = Mutect2.out.stats.groupTuple(size: num_lists) | MergeMutectStats
 
-
         // FILTERING
         // Group all needed files together by sample_id and send to Filtering process
         sample_grouped = vcfs.concat(f1r2,stats).groupTuple(size: 3)
         FilterMutect(sample_grouped,
                     REF_AUXILLARY.out.fai,
                     REF_AUXILLARY.out.dict,
-                    REF_AUXILLARY.out.ref)
+                    ref)
 
 
     // haplotype_vcf
@@ -83,16 +65,12 @@ process REF_AUXILLARY {
     output:
         path "${ref_file}.fai", emit: fai
         path "${ref_file.baseName}.dict", emit: dict
-        path ref_file, emit: ref
-        // stdout emit: verbo
 
 
     script:
     """
-    echo "Running samtools faidx and docker"
     samtools faidx ${ref_file}
     gatk CreateSequenceDictionary -R \$PWD/${ref_file} -O \$PWD/${ref_file.baseName}.dict
-    ls -lah
     """
 
     stub:
@@ -243,6 +221,77 @@ process MergeVcfs {
     }
     """
     gatk MergeVcfs ${allVCFs} -O merged_${sample_id}.vcf
+    """
+}
+
+
+process MergeOrientationModel {
+    label 'variant_calling'
+    label 'falliable'
+    // This requires all the f1r2 files from scattered analysis
+    input:
+    tuple val(sample_id), path(all_f1r2) // this takes all paths to f1r2 for one sample ID
+
+    output:
+    tuple val(sample_id), path("*.tar.gz")
+
+    script:
+
+    def input_args = ""
+    for (f1r2 in all_f1r2) {
+        input_args += "-I ${f1r2} "
+    }
+
+    """
+    gatk LearnReadOrientationModel ${input_args} -O ${sample_id}_read-orientation-model.tar.gz
+    """
+}
+
+process MergeMutectStats {
+    label 'variant_calling'
+    input:
+    tuple val(sample_id), path(all_stats)
+
+    output:
+    tuple val(sample_id), path("*.stats")
+
+    script:
+
+    def input_args = ""
+    for (stats in all_stats) {
+        input_args += "-stats ${stats} "
+    }
+    """
+    gatk MergeMutectStats \
+        ${input_args} \
+        -O ${sample_id}_merged.stats
+    """
+}
+
+
+process FilterMutect {
+    label 'variant_calling'
+    label 'falliable'
+    publishDir "${params.output_dir}/vcf/filtered/${sample_id}", mode: 'copy', overwrite: true, pattern: "*.vcf"
+
+    input:
+    tuple val(sample_id), path(req_files)
+    path fai
+    path dict
+    path ref
+
+    output:
+    tuple val(sample_id), path("*.vcf")
+
+    script:
+    def (vcf, read_orient, stats) = req_files
+    """
+    gatk FilterMutectCalls \
+        -R ${ref} \
+        -V ${vcf} \
+        --stats ${stats} \
+        --ob-priors ${read_orient} \
+        -O filtered_${sample_id}.vcf
     """
 }
 

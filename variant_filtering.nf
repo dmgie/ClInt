@@ -1,74 +1,3 @@
-
-
-process MergeOrientationModel {
-    label 'variant_calling'
-    label 'falliable'
-    // This requires all the f1r2 files from scattered analysis
-    input:
-    tuple val(sample_id), path(all_f1r2) // this takes all paths to f1r2 for one sample ID
-
-    output:
-    tuple val(sample_id), path("*.tar.gz")
-
-    script:
-
-    def input_args = ""
-    for (f1r2 in all_f1r2) {
-        input_args += "-I ${f1r2} "
-    }
-
-    """
-    gatk LearnReadOrientationModel ${input_args} -O ${sample_id}_read-orientation-model.tar.gz
-    """
-}
-
-process MergeMutectStats {
-    label 'variant_calling'
-    input:
-    tuple val(sample_id), path(all_stats)
-
-    output:
-    tuple val(sample_id), path("*.stats")
-
-    script:
-
-    def input_args = ""
-    for (stats in all_stats) {
-        input_args += "-stats ${stats} "
-    }
-    """
-    gatk MergeMutectStats \
-        ${input_args} \
-        -O ${sample_id}_merged.stats
-    """
-}
-
-process FilterMutect {
-    label 'variant_calling'
-    label 'falliable'
-    publishDir "${params.output_dir}/vcf/filtered/${sample_id}", mode: 'copy', overwrite: true, pattern: "*.vcf"
-
-    input:
-    tuple val(sample_id), path(req_files)
-    path fai
-    path dict
-    path ref
-
-    output:
-    tuple val(sample_id), path("*.vcf")
-
-    script:
-    def (vcf, read_orient, stats) = req_files
-    """
-    gatk FilterMutectCalls \
-        -R ${ref} \
-        -V ${vcf} \
-        --stats ${stats} \
-        --ob-priors ${read_orient} \
-        -O filtered_${sample_id}.vcf
-    """
-}
-
 process VariantFiltration {
     label 'variant_calling'
     publishDir "${params.output_dir}/vcf/filtered/", mode: 'copy', overwrite: true, pattern: "*snc*.vcf"
@@ -103,6 +32,7 @@ process VariantFiltration {
         ${filtering_args}
     """
 }
+
 
 workflow VARIANT_PROCESSING {
     take:

@@ -1,6 +1,5 @@
 include { SAMTOOLS_INDEX } from './mapping';
 
-
 workflow VARIANT_PREPROCESSING {
     take:
         bam_bai
@@ -26,6 +25,20 @@ workflow VARIANT_PREPROCESSING {
         recalibrated
 }
 
+
+process IndexVCF {
+    input:
+    path vcf
+
+    output:
+    tuple path(vcf), path("*.tbi")
+
+    script:
+    println "Indexing ${vcf}"
+    """
+    gatk IndexFeatureFile -I ${vcf};
+    """
+}
 
 process CalculateRecalibration {
     input:
@@ -71,19 +84,5 @@ process ApplyRecalibration {
         -I ${bam} \
         --bqsr-recal-file ${table} \
         -O ${sample_id}_recal.bam
-    """
-}
-
-process IndexVCF {
-    input:
-    path vcf
-
-    output:
-    tuple path(vcf), path("*.tbi")
-
-    script:
-    println "Indexing ${vcf}"
-    """
-    gatk IndexFeatureFile -I ${vcf};
     """
 }
