@@ -5,16 +5,18 @@ workflow MAPPING {
     take:
         reads
         ref_file
+        annotation
     main:
-        ANNOTATION = Channel.fromPath(params.gff_file)
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
-            ref_idx = HISAT_BUILD(ref_file).collect()
+            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : HISAT_BUILD(ref_file).collect()
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, ANNOTATION).collect()
-            sorted_index_bams = STAR(reads,ref_idx)
-            sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
+            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, annotation).collect()
+            // sorted_index_bams = STAR(reads,ref_idx)
+            // sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
+            sorted_index_bams = STAR_CIRCRNA(reads,ref_idx)
+            sorted_index_bams = SAMTOOLS_INDEX(STAR_CIRCRNA.out.bam)
         } else {
             println "ERROR: Mapping method not recognised"
         }
@@ -141,7 +143,6 @@ process STAR_BUILD {
     def extension_args = annotation.extension == "gtf" ? "" :
         "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
     """
-    echo "GTF file detected"
     STAR --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
         --genomeDir . \
@@ -160,7 +161,6 @@ process STAR {
     label 'mapping'
     publishDir "${params.output_dir}/star_mapping/", mode: 'symlink', pattern: '*.bam'
     publishDir "${params.output_dir}/star_log/", mode: 'copy', pattern: '*.{final,SJ}*'
-    // publishDir "${params.output_dir}/aligned_bams/${sample_id}", mode: 'copy', pattern: '*.bam'
 
     input:
         tuple val(sample_id), path(reads)
@@ -176,6 +176,7 @@ process STAR {
     def SAM_HEADER = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
     def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
                                     "--readFilesIn ${read1}"
+    def two_pass = params.star_two_pass ? "--twopassMode Basic" : ""
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
@@ -186,7 +187,191 @@ process STAR {
         --outSAMattrRGline $SAM_HEADER \
         --outSAMmapqUnique 60 \
         --limitBAMsortRAM 10000000000 \
-        ${read_arguments}
+        ${read_arguments} ${two_pass}
+
+    # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
+    mv ${sample_id}_*.bam ${sample_id}.bam
+    """
+
+    stub:
+    """
+    touch ${sample_id}.bam
+    """
+}
+
+
+process STAR_CIRCRNA {
+    label 'mapping'
+    publishDir "${params.output_dir}/star_circ_mapping/", mode: 'symlink', pattern: '*.bam'
+    publishDir "${params.output_dir}/star_circ_log/", mode: 'copy', pattern: '*.{final,SJ}*'
+    publishDir "${params.output_dir}/star_circ_chimeric/", mode: 'copy', pattern: '*[Cc]himeric.out.junction*'
+    input:
+    tuple val(sample_id), path(reads)
+    path ref_idx
+
+    output:
+    tuple val(sample_id),  path("*.bam"), emit: bam
+    path "*{final,SJ}*", emit: logs
+    path "*[Cc]himeric*", emit: chimera
+
+    // Options adopted from `STAR-Fusion` documentation
+    script:
+    def (read1,read2) = [reads[0], reads[1]]
+    def SAM_HEADER = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
+    def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
+        "--readFilesIn ${read1}"
+    def two_pass = params.star_two_pass ? "--twopassMode Basic" : ""
+    """
+    echo "Working on ${reads}"
+    STAR --runThreadN ${task.cpus} \
+        --genomeDir . \
+        --readFilesCommand zcat \
+        --outSAMtype BAM SortedByCoordinate \
+        --outFileNamePrefix ${sample_id}_ \
+        --outSAMattrRGline $SAM_HEADER \
+        --outSAMmapqUnique 60 \
+        --limitBAMsortRAM 10000000000 \
+        --chimSegmentMin 12 \
+        --chimJunctionOverhangMin 8 \
+        --chimOutJunctionFormat 1 \
+        --alignSJDBoverhangMin 10 \
+        --alignMatesGapMax 100000 \
+        --alignIntronMax 100000 \
+        --alignSJstitchMismatchNmax 5 -1 5 5 \
+        --chimMultimapScoreRange 3 \
+        --chimScoreJunctionNonGTAG -4 \
+        --chimMultimapNmax 20 \
+        --chimNonchimScoreDropMin 10 \
+        --peOverlapNbasesMin 12 \
+        --peOverlapMMp 0.1 \
+        --alignInsertionFlush Right \
+        --alignSplicedMateMapLminOverLmate 0 \
+        --alignSplicedMateMapLmin 30 \
+        ${two_pass} ${read_arguments}
+
+    # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
+    mv ${sample_id}_*.bam ${sample_id}.bam
+    """
+
+    stub:
+    """
+    touch ${sample_id}.bam
+    """
+}
+
+process STAR_CIRCRNA_CIRCTOOLS {
+    label 'mapping'
+    publishDir "${params.output_dir}/star_circ_mapping/", mode: 'symlink', pattern: '*.bam'
+    publishDir "${params.output_dir}/star_circ_log/", mode: 'copy', pattern: '*.{final,SJ}*'
+    publishDir "${params.output_dir}/star_circ_chimeric/", mode: 'copy', pattern: '*[Cc]himeric.out.junction*'
+    input:
+    tuple val(sample_id), path(reads)
+    path annotation
+    path ref_idx
+
+    output:
+    tuple val(sample_id),  path("*.bam"), emit: bam
+    path "*{final,SJ}*", emit: logs
+    path "*[Cc]himeric*", emit: chimera
+
+    // This is specific for the `circtools` tool.
+    // To be more sensitive, it runs STAR 3 times (for paired-end data)
+    // Once with both mates, and then separately for each one
+    //
+    script:
+    def (read1,read2) = [reads[0], reads[1]]
+    def SAM_HEADER = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
+    def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
+        "--readFilesIn ${read1}"
+    """
+    # Requires almost deprecated SeparateSAMold function to work
+    # Run once with pair, then separately
+    STAR --runThreadN ${task.cpus} \
+        --genomeDir . \
+        --genomeLoad NoSharedMemory \
+        --readFilesCommand zcat  \
+        ${read_arguments}  \
+        --outFileNamePrefix ${sample_id}_ \
+        --sjdbGTFfile ${annotation} \
+        --outReadsUnmapped Fastx \
+        --outSAMattributes NH HI AS nM NM MD jM jI XS \
+        --outSJfilterOverhangMin 15   15   15   15 \
+        --outFilterMultimapNmax 20 \
+        --outFilterScoreMin 1 \
+        --outFilterMatchNminOverLread 0.7 \
+        --outFilterMismatchNmax 999 \
+        --outFilterMismatchNoverLmax 0.05 \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignMatesGapMax 1000000 \
+        --alignSJoverhangMin 15 \
+        --alignSJDBoverhangMin 10 \
+        --alignSoftClipAtReferenceEnds No \
+        --chimSegmentMin 15 \
+        --chimScoreMin 15 \
+        --chimScoreSeparation 10 \
+        --chimJunctionOverhangMin 15 \
+        --quantMode GeneCounts \
+        --twopassMode Basic \
+        --chimOutType Junctions SeparateSAMold
+
+    STAR --runThreadN ${task.cpus} \
+        --genomeDir . \
+        --genomeLoad NoSharedMemory \
+        --readFilesCommand zcat  \
+        --readFilesIn ${read1}  \
+        --outFileNamePrefix ${read1.baseName}_ \
+        --sjdbGTFfile ${annotation} \
+        --outReadsUnmapped Fastx \
+        --outSAMattributes NH HI AS nM NM MD jM jI XS \
+        --outSJfilterOverhangMin 15   15   15   15 \
+        --outFilterMultimapNmax 20 \
+        --outFilterScoreMin 1 \
+        --outFilterMatchNminOverLread 0.7 \
+        --outFilterMismatchNmax 999 \
+        --outFilterMismatchNoverLmax 0.05 \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignMatesGapMax 1000000 \
+        --alignSJoverhangMin 15 \
+        --alignSJDBoverhangMin 10 \
+        --alignSoftClipAtReferenceEnds No \
+        --chimSegmentMin 15 \
+        --chimScoreMin 15 \
+        --chimScoreSeparation 10 \
+        --chimJunctionOverhangMin 15 \
+        --quantMode GeneCounts \
+        --twopassMode Basic \
+        --chimOutType Junctions SeparateSAMold
+
+    STAR --runThreadN ${task.cpus} \
+        --genomeDir . \
+        --genomeLoad NoSharedMemory \
+        --readFilesCommand zcat  \
+        --readFilesIn ${read1}  \
+        --outFileNamePrefix ${read2.baseName}_ \
+        --sjdbGTFfile ${annotation} \
+        --outReadsUnmapped Fastx \
+        --outSAMattributes NH HI AS nM NM MD jM jI XS \
+        --outSJfilterOverhangMin 15   15   15   15 \
+        --outFilterMultimapNmax 20 \
+        --outFilterScoreMin 1 \
+        --outFilterMatchNminOverLread 0.7 \
+        --outFilterMismatchNmax 999 \
+        --outFilterMismatchNoverLmax 0.05 \
+        --alignIntronMin 20 \
+        --alignIntronMax 1000000 \
+        --alignMatesGapMax 1000000 \
+        --alignSJoverhangMin 15 \
+        --alignSJDBoverhangMin 10 \
+        --alignSoftClipAtReferenceEnds No \
+        --chimSegmentMin 15 \
+        --chimScoreMin 15 \
+        --chimScoreSeparation 10 \
+        --chimJunctionOverhangMin 15 \
+        --quantMode GeneCounts \
+        --twopassMode Basic \
+        --chimOutType Junctions SeparateSAMold
 
     # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
     mv ${sample_id}_*.bam ${sample_id}.bam
