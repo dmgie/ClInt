@@ -5,15 +5,15 @@ workflow MAPPING {
     take:
         reads
         ref_file
+        annotation
     main:
-        ANNOTATION = Channel.fromPath(params.gff_file)
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
             ref_idx = HISAT_BUILD(ref_file).collect()
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, ANNOTATION).collect()
-            sorted_index_bams = STAR(reads,ref_idx)
+            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, annotation).collect()
+            STAR(reads,ref_idx)
             sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
         } else {
             println "ERROR: Mapping method not recognised"
@@ -49,19 +49,17 @@ process SAMTOOLS_SORT {
 
 
 process SAMTOOLS_INDEX {
+    publishDir "${params.output_dir}/bam_index/", mode: 'symlink', pattern: "*.bai"
     label 'mapping'
     input:
         tuple val(sample_id), path(bam_file)
-    // TODO: Do we have *.bai and bam separate or as one?
-    // As one would make more sense?
     output:
         tuple val(sample_id), path(bam_file), path("*.bai")
 
     script:
-
     """
-    echo "Sorting ${bam_file}"
-    samtools index -@ ${task.cpus} -o ${bam_file.simpleName}.bai ${bam_file}
+    echo "Sorting ${bam_file} to ${bam_file.baseName}"
+    samtools index -@ ${task.cpus} ${bam_file} ${bam_file.baseName}.bai
     """
 
     stub:
