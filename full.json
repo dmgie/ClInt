@@ -1,11 +1,11 @@
 {
     "input_dir"       : "../RawData/RNA/Latest/merged",
-    "output_dir"      : "./full_runthrough_output_v37",
+    "output_dir"      : "./output",
     "reference_dir"   : "../Reference/v37",
     "reference_file"  : "../Reference/v37/*.{fa,fasta}",
     "gff_file"        : "../Reference/v37/*.gtf",
     "known_sites"     : "../Reference/*.vcf.{gz,gz.tbi}",
-    "genome_index"    : "./full_runthrough_output_v37/star_index",
+    "genome_index"    : "./star_index",
 
     "num_threads"     : 4,
     "max_memory"      : "50.GB",
