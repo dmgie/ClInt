@@ -27,7 +27,7 @@ workflow {
 
     PREPROCESS(input_reads)
     MAPPING(PREPROCESS.out, reference, annotation)
-    // VARIANT_CALLING(MAPPING.out, reference) // Places files in output folder
+    VARIANT_CALLING(MAPPING.out, reference) // Places files in output folder
 
     // If assembly wanted
     // ASSEMBLY(INPUT_READS, MAPPING.out, REFERENCE) 
