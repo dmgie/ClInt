@@ -10,30 +10,25 @@ workflow VARIANT_CALLING {
         def group_size = 5 // How many intervals each GATK command should take
         def chromosomes = (1..21) + ['X', 'Y']
         def num_lists = ((chromosomes.size() / group_size) + (chromosomes.size() % group_size > 0 ? 1 : 0)) as int
-        groups = Channel.fromList(chromosomes).collate(group_size)
+        // def groups = Channel.fromList(chromosomes).collate(group_size)
+        def groups = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15], [16, 17, 18, 19, 20], [21, "X", "Y"]]
+
+
+        ref2 = ref.first() // change to value channel from normal path channel
 
         // Create .dict and .fai files for reference fasta file
-        REF_AUXILLARY(ref)
+        REF_AUXILLARY(ref2)
 
-        bam_split_n = SplitNCigarReads(sorted_index_bam,
-                                       REF_AUXILLARY.out.fai,
-                                       REF_AUXILLARY.out.dict,
-                                       ref,
-                                       groups)
-        .groupTuple(size: num_lists) | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
-
-
-        // bam_split_n = BAM_PREPROCESSING(sorted_index_bam, REF_AUXILLARY, [groups, num_lists])
-
-        // NOTE: The bams can either be the same or recalibrated, we have it uncalibrated
-        // recalibrated =
-        recalibrated = bam_split_n // OR VARIANT_PREPROCESSING(bam_split_n,REF_AUXILLARY)
-
-        // Mutect2(bam_split_n,
-        Mutect2(recalibrated,
+        bam_split = SplitNCigarReads(sorted_index_bam,
                 REF_AUXILLARY.out.fai,
                 REF_AUXILLARY.out.dict,
-                ref,
+                ref2,
+                groups).groupTuple() | MergeBams | SAMTOOLS_SORT | MarkDuplicates | SAMTOOLS_INDEX
+
+        Mutect2(bam_split,
+                REF_AUXILLARY.out.fai,
+                REF_AUXILLARY.out.dict,
+                ref2,
                 groups)
 
         // Collect for each sample ID (i.e paired end read set) the (per-chromosome) scattered
@@ -48,7 +43,7 @@ workflow VARIANT_CALLING {
         FilterMutect(sample_grouped,
                     REF_AUXILLARY.out.fai,
                     REF_AUXILLARY.out.dict,
-                    ref)
+                    ref2)
 
 
     // haplotype_vcf
@@ -106,6 +101,7 @@ process MarkDuplicates {
 }
 
 process SplitNCigarReads {
+    tag "${sample_id}"
     label 'variant_calling'
     label 'forking_heavy'
     input:
@@ -125,7 +121,6 @@ process SplitNCigarReads {
         interval_args += " -L ${chr}"
         name += "${chr}_"
     }
-    // println "Processing SplitNCigarReads for ${interval_args} for ${sample_id}"
 
     """
     echo "Working on ${bam}"

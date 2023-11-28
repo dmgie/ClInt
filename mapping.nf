@@ -13,10 +13,12 @@ workflow MAPPING {
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
             ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, annotation).collect()
-            // sorted_index_bams = STAR(reads,ref_idx)
-            // sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
-            sorted_index_bams = STAR_CIRCRNA(reads,ref_idx)
-            sorted_index_bams = SAMTOOLS_INDEX(STAR_CIRCRNA.out.bam)
+            // sorted_index_bams = STAR_CIRCRNA(reads,ref_idx)
+            // sorted_index_bams = SAMTOOLS_INDEX(STAR_CIRCRNA.out.bam)
+            STAR_CIRCRNA(reads,ref_idx)
+            STAR_CIRCRNA_CIRCTOOLS(reads,ref_idx)
+            STAR(reads,ref_idx)
+            sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
         } else {
             println "ERROR: Mapping method not recognised"
         }
@@ -51,19 +53,17 @@ process SAMTOOLS_SORT {
 
 
 process SAMTOOLS_INDEX {
+    publishDir "${params.output_dir}/bam_index/", mode: 'symlink', pattern: "*.bai"
     label 'mapping'
     input:
         tuple val(sample_id), path(bam_file)
-    // TODO: Do we have *.bai and bam separate or as one?
-    // As one would make more sense?
     output:
         tuple val(sample_id), path(bam_file), path("*.bai")
 
     script:
-
     """
-    echo "Sorting ${bam_file}"
-    samtools index -@ ${task.cpus} -o ${bam_file.simpleName}.bai ${bam_file}
+    echo "Sorting ${bam_file} to ${bam_file.baseName}"
+    samtools index -@ ${task.cpus} ${bam_file} ${bam_file.baseName}.bai
     """
 
     stub:
@@ -261,18 +261,16 @@ process STAR_CIRCRNA {
 
 process STAR_CIRCRNA_CIRCTOOLS {
     label 'mapping'
-    publishDir "${params.output_dir}/star_circ_mapping/", mode: 'symlink', pattern: '*.bam'
-    publishDir "${params.output_dir}/star_circ_log/", mode: 'copy', pattern: '*.{final,SJ}*'
-    publishDir "${params.output_dir}/star_circ_chimeric/", mode: 'copy', pattern: '*[Cc]himeric.out.junction*'
+    publishDir "${params.output_dir}/star_circtools/${sample_id}", mode: 'symlink', pattern: 'main/*'
+    publishDir "${params.output_dir}/star_circtools/${sample_id}/mate1", mode: 'symlink', pattern: 'mate1/*'
+    publishDir "${params.output_dir}/star_circtools/${sample_id}/mate2", mode: 'symlink', pattern: 'mate2/*'
     input:
     tuple val(sample_id), path(reads)
     path annotation
     path ref_idx
 
     output:
-    tuple val(sample_id),  path("*.bam"), emit: bam
-    path "*{final,SJ}*", emit: logs
-    path "*[Cc]himeric*", emit: chimera
+    path "*"
 
     // This is specific for the `circtools` tool.
     // To be more sensitive, it runs STAR 3 times (for paired-end data)
@@ -291,7 +289,7 @@ process STAR_CIRCRNA_CIRCTOOLS {
         --genomeLoad NoSharedMemory \
         --readFilesCommand zcat  \
         ${read_arguments}  \
-        --outFileNamePrefix ${sample_id}_ \
+        --outFileNamePrefix main/${sample_id}_ \
         --sjdbGTFfile ${annotation} \
         --outReadsUnmapped Fastx \
         --outSAMattributes NH HI AS nM NM MD jM jI XS \
@@ -320,7 +318,7 @@ process STAR_CIRCRNA_CIRCTOOLS {
         --genomeLoad NoSharedMemory \
         --readFilesCommand zcat  \
         --readFilesIn ${read1}  \
-        --outFileNamePrefix ${read1.baseName}_ \
+        --outFileNamePrefix mate1/${read1.baseName}_ \
         --sjdbGTFfile ${annotation} \
         --outReadsUnmapped Fastx \
         --outSAMattributes NH HI AS nM NM MD jM jI XS \
@@ -349,7 +347,7 @@ process STAR_CIRCRNA_CIRCTOOLS {
         --genomeLoad NoSharedMemory \
         --readFilesCommand zcat  \
         --readFilesIn ${read1}  \
-        --outFileNamePrefix ${read2.baseName}_ \
+        --outFileNamePrefix mate2/${read2.baseName}_ \
         --sjdbGTFfile ${annotation} \
         --outReadsUnmapped Fastx \
         --outSAMattributes NH HI AS nM NM MD jM jI XS \
