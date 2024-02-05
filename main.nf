@@ -11,7 +11,8 @@ workflow {
     // Do a quick parameter check
     CHECKPARAMS()
 
-    if (params.paired) {
+    // If paired-end but no samplesheet is given, use the directories
+    if (params.paired && !params.samplesheet) {
         input_reads = Channel.fromFilePairs("${params.input_dir}/*{${params.r1_pattern},${params.r2_pattern}}*.f*q.[gz|bz2]?",
                                             type: 'file',
                                             maxDepth: 5)
@@ -27,15 +28,18 @@ workflow {
                     map { row -> tuple(row.sample, [file(row.fastq_1), file(row.fastq_2)]) }
     }
 
-    reference = Channel.fromPath(params.reference_file);
-    annotation = Channel.fromPath(params.gff_file);
-    input_dir = Channel.fromPath(params.input_dir);
+    reference = Channel.fromPath(params.reference_file).first();
+    annotation = Channel.fromPath(params.gff_file).first();
+    
 
     input_reads.view()
     println input_reads
     PREPROCESS(input_reads)
-    MAPPING(PREPROCESS.out, reference, annotation)
-    VARIANT_CALLING(MAPPING.out, reference) // Places files in output folder
+    CIRCRNA(PREPROCESS.out, reference, annotation)
+    
+    // MAPPING(PREPROCESS.out, reference, annotation)
+    // VARIANT_CALLING(MAPPING.out, reference) // Places files in output folder
+
 
 }
 
