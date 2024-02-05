@@ -3,6 +3,7 @@ nextflow.enable.dsl=2
 
 include { PREPROCESS } from './preprocess'
 include { MAPPING } from './mapping'
+include { CIRCRNA } from './circrna'
 include { ASSEMBLY } from './assembly'
 include { VARIANT_CALLING } from './variant_calling'
 
