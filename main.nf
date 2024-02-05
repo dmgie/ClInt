@@ -16,23 +16,27 @@ workflow {
                                             type: 'file',
                                             maxDepth: 5)
     } else {
-        // TODO: What to put as the second element in the list for the tuple i.e [name_id, [read, _]]? Or we can just leave it fully alone?
         input_reads = Channel.fromPath("${params.input_dir}/*.f*q.[gz|bz2]?", type: 'file', maxDepth: 5)
                     .map(read -> tuple(read.simpleName, read))
     }
 
+    // If we are given a sample sheet, use that instead
+    if (params.samplesheet) {
+        input_reads = Channel.fromPath("${params.samplesheet}") | \
+                    splitCsv(header:true) | \
+                    map { row -> tuple(row.sample, [file(row.fastq_1), file(row.fastq_2)]) }
+    }
 
     reference = Channel.fromPath(params.reference_file);
     annotation = Channel.fromPath(params.gff_file);
     input_dir = Channel.fromPath(params.input_dir);
 
+    input_reads.view()
+    println input_reads
     PREPROCESS(input_reads)
     MAPPING(PREPROCESS.out, reference, annotation)
     VARIANT_CALLING(MAPPING.out, reference) // Places files in output folder
 
-    // If assembly wanted
-    // ASSEMBLY(INPUT_READS, MAPPING.out, REFERENCE) 
-    // VARIANT_CALLING(MAPPING.out.concat(ASSEMBLY.out), REFERENCE) // Places files in output folder
 }
 
 
@@ -55,7 +59,7 @@ def CHECKPARAMS() {
         println "  GFF file         :  $params.gff_file"
         println "  Number of cores  :  $params.max_memory"
         println "  Max memory       :  $params.max_memory"
-        println "  Genome Index     :  $params.genome_index"
+        println "  Genome Index     :  $params.star_index"
         println "  Known SNPs       :  $params.known_sites"
         println "  Paired?          :  $params.paired"
         println "  Star Two-pass?   :  $params.star_two_pass"
