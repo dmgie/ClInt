@@ -1,5 +1,4 @@
-
-
+// All mapping-related workflow
 
 workflow MAPPING {
     take:
@@ -7,24 +6,23 @@ workflow MAPPING {
         ref_file
         annotation
     main:
+        circ = false;
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
-            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : HISAT_BUILD(ref_file).collect()
+            ref_idx = params.hisat_index != '' ? Channel.fromPath("${params.hisat_index}/*").collect() : HISAT_BUILD(ref_file).collect()
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, annotation).collect()
-            // sorted_index_bams = STAR_CIRCRNA(reads,ref_idx)
-            // sorted_index_bams = SAMTOOLS_INDEX(STAR_CIRCRNA.out.bam)
-            STAR_CIRCRNA(reads,ref_idx)
-            STAR_CIRCRNA_CIRCTOOLS(reads,ref_idx)
-            STAR(reads,ref_idx)
+            ref_idx = params.star_index != '' ? Channel.fromPath("${params.star_index}/*").collect() :
+                    STAR_BUILD(ref_file, annotation).collect()
+            STAR(reads,ref_idx,false)
+
             sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
         } else {
             println "ERROR: Mapping method not recognised"
         }
 
-    emit:
-    sorted_index_bams // tuple sample_id, bam and bai
+    // emit:
+    // sorted_index_bams // tuple sample_id, bam and bai
 }
 
 
@@ -42,7 +40,6 @@ process SAMTOOLS_SORT {
     echo "Sorting ${xam_file}"
     mv ${xam_file} temp.ext # Avoid bam->bam name collision
     samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam temp.ext
-    #samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam ${xam_file}
     """
 
     stub:
@@ -127,7 +124,6 @@ process HISAT2 {
 }
 
 process STAR_BUILD {
-    // NOTE: REMOVE v37 ONCE PATIENT HAS RUN THROUGH
     publishDir "${params.output_dir}/star_index", mode: 'copy', pattern: '*'
     label 'mapping'
     input:
@@ -157,6 +153,7 @@ process STAR_BUILD {
     """
 }
 
+// NOTE: Output section adapted from nf-core's STAR module
 process STAR {
     label 'mapping'
     publishDir "${params.output_dir}/star_mapping/", mode: 'symlink', pattern: '*.bam'
