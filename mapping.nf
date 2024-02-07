@@ -1,5 +1,4 @@
-
-
+// All mapping-related workflow
 
 workflow MAPPING {
     take:
@@ -7,20 +6,23 @@ workflow MAPPING {
         ref_file
         annotation
     main:
+        circ = false;
         mapping_method = params.mapping.toLowerCase()
         if (mapping_method == "hisat2") {
-            ref_idx = HISAT_BUILD(ref_file).collect()
+            ref_idx = params.hisat_index != '' ? Channel.fromPath("${params.hisat_index}/*").collect() : HISAT_BUILD(ref_file).collect()
             sorted_index_bams = HISAT2(reads, ref_idx) | SAMTOOLS_SORT | SAMTOOLS_INDEX
         } else if (mapping_method == "star") {
-            ref_idx = params.genome_index != '' ? Channel.fromPath("${params.genome_index}/*").collect() : STAR_BUILD(ref_file, annotation).collect()
-            STAR(reads,ref_idx)
+            ref_idx = params.star_index != '' ? Channel.fromPath("${params.star_index}/*").collect() :
+                    STAR_BUILD(ref_file, annotation).collect()
+            STAR(reads,ref_idx,false)
+
             sorted_index_bams = SAMTOOLS_INDEX(STAR.out.bam)
         } else {
             println "ERROR: Mapping method not recognised"
         }
 
-    emit:
-    sorted_index_bams // tuple sample_id, bam and bai
+    // emit:
+    // sorted_index_bams // tuple sample_id, bam and bai
 }
 
 
@@ -38,7 +40,6 @@ process SAMTOOLS_SORT {
     echo "Sorting ${xam_file}"
     mv ${xam_file} temp.ext # Avoid bam->bam name collision
     samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam temp.ext
-    #samtools sort -@ ${task.cpus} -o ${xam_file.simpleName}.bam ${xam_file}
     """
 
     stub:
@@ -123,7 +124,6 @@ process HISAT2 {
 }
 
 process STAR_BUILD {
-    // NOTE: REMOVE v37 ONCE PATIENT HAS RUN THROUGH
     publishDir "${params.output_dir}/star_index", mode: 'copy', pattern: '*'
     label 'mapping'
     input:
@@ -139,7 +139,6 @@ process STAR_BUILD {
     def extension_args = annotation.extension == "gtf" ? "" :
         "--sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon $feature"
     """
-    echo "GTF file detected"
     STAR --runThreadN ${task.cpus} \
         --runMode genomeGenerate \
         --genomeDir . \
@@ -154,26 +153,45 @@ process STAR_BUILD {
     """
 }
 
+// NOTE: Output section adapted from nf-core's STAR module
 process STAR {
     label 'mapping'
     publishDir "${params.output_dir}/star_mapping/", mode: 'symlink', pattern: '*.bam'
     publishDir "${params.output_dir}/star_log/", mode: 'copy', pattern: '*.{final,SJ}*'
-    // publishDir "${params.output_dir}/aligned_bams/${sample_id}", mode: 'copy', pattern: '*.bam'
 
     input:
         tuple val(sample_id), path(reads)
-        path ref_idx
+        path  ref_idx
+        val   opt                               // Optional for circRNA
 
     output:
-    tuple val(sample_id),  path("*.bam"), emit: bam
-    path "*{final,SJ}*", emit: logs
+    tuple val(sample_id), path('*.bam')      , emit: bam
+    tuple val(sample_id), path('*.tab')                   , optional:true, emit: tab
+    tuple val(sample_id), path('*.SJ.out.tab')            , optional:true, emit: spl_junc_tab
+    tuple val(sample_id), path('*.out.junction')          , optional:true, emit: junction
+    tuple val(sample_id), path('*.out.sam')               , optional:true, emit: sam
+
 
     script:
-    // No strand-specific options needed here
-    def (read1,read2) = [reads[0], reads[1]]
-    def SAM_HEADER = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
-    def read_arguments = params.paired ? "--readFilesIn ${read1} ${read2}" :
-                                    "--readFilesIn ${read1}"
+    def sam_header = "ID:aligned_${sample_id}\tSM:None\tLB:None\tPL:Illumina"
+    def read_args = "--readFilesIn ${reads}"
+    def two_pass = params.star_two_pass ? "--twopassMode Basic" : ""
+    def circ_opts = opt ? "--outReadsUnmapped Fastx \
+        --outSJfilterOverhangMin 15 15 15 15 \
+        --alignSJoverhangMin 15 \
+        --alignSJDBoverhangMin 15 \
+        --outFilterMultimapNmax 20 \
+        --outFilterScoreMin 1 \
+        --outFilterMatchNmin 1 \
+        --outFilterMismatchNmax 2 \
+        --chimSegmentMin 15 \
+        --chimScoreMin 15 \
+        --chimScoreSeparation 10 \
+        --chimJunctionOverhangMin 15" : ""
+
+
+    println "STAR on $reads"
+    
     """
     echo "Working on ${reads}"
     STAR --runThreadN ${task.cpus} \
@@ -181,10 +199,10 @@ process STAR {
         --readFilesCommand zcat \
         --outSAMtype BAM SortedByCoordinate \
         --outFileNamePrefix ${sample_id}_ \
-        --outSAMattrRGline $SAM_HEADER \
+        --outSAMattrRGline ${sam_header} \
         --outSAMmapqUnique 60 \
         --limitBAMsortRAM 10000000000 \
-        ${read_arguments}
+        ${circ_opts} ${read_args} ${two_pass}
 
     # Rename file so that downstream (i.e HaplotypeCaller) publishDir works fine
     mv ${sample_id}_*.bam ${sample_id}.bam
@@ -195,11 +213,3 @@ process STAR {
     touch ${sample_id}.bam
     """
 }
-
-// process BamQC {
-//     input:
-//     output:
-//     script:
-//     """
-//     """
-// }
