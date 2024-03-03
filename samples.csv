@@ -1,0 +1,2 @@
+sample,fastq_1,fastq_2
+name_of_sample_1,/path/to/pair_1.fastq.gz,/path/to/pair_2.fastq.gz
