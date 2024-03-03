@@ -1,5 +1,5 @@
 /.nextflow
-/work
+/work*
 /.nextflow.log*
 /deduped*
 /haplotype*
@@ -15,3 +15,6 @@
 /output
 /dag*.dot
 /star_index
+/singularity_images
+/backup
+/no-commit
