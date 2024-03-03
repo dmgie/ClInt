@@ -41,6 +41,8 @@ These parameters can also be given in the form a YAML/JSON formatted nextflow co
 
 The output of the pipeline will then be provided in the foldering given to the `--output_dir` parameter.
 
+Instead of providing an input folder of reads, it is also possible to provide a samplesheet via the `--samplesheet` parameter. This is formatted as a CSV in 3 columns with "sample,fastq_1,fastq_2" as the headers, where `sample` is an identifier for a set of paired-end reads.
+
 *Running inside Singularity*:
 All that is required to run the pipeline, is to provide either a local path to the main "ClInt.sif" singularity container, or a link to a library which hosts the container. To do this, inside the `nextflow.config` file, modify the singularity profile - specifically the `container` variable inside the `process` block. Either provide a relative (`file://<relative_path>`), absolute path (`file:///<absolute_path>`) or a link. If given a link, it will download the containers into a temporary/cache directory, defined by the system's `SINGULARITY_CACHEDIR` environment variable.
 
