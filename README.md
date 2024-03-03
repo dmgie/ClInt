@@ -1,44 +1,51 @@
 # ClInt
 
-## What is it
+## What is this pipeline
 
-This pipeline was created as a way to integrate multiple methods and tools to analyse clinical data - specifically regarding breast cancer and COVID-related data. It utilises Nextflow in order to carry out most of the process in parallel and on demand as soon as files become available, reducing the run time dramatically. 
+This pipeline was created as a way to integrate multiple methods and tools for analysis of clinical data - specifically in regards to analysing COVID19-related data. This includes mapping RNA-seq reads to a reference genome, carrying out variant calling (on RNA-seq data) and running circular RNA and micro-RNA prediction. It utilises Nextflow in order to carry out most of the process in parallel and on demand when the required input files are available, reducing the run time dramatically. 
 
-Althought not yet implemented, utilising the SLURM executor for running it on HPC's also helps dramatically decrease the runtimes for some of the programs (especially during Assembly-based steps).
-
-Provided additionally is a Dockerfile as well as a build script (`build_image.sh`) which can be used to create a Docker image, as well as a Singularity image - for usage depending on what is easier.
+Provided additionally is a Guix manifest file, which allows for running temporary containers via `guix shell` or also generating singularity or docker images via the `guix pack --format=docker` and `guix pack --format=squashfs` commands.
 
 ## Installation
+To download the pipeline, run
+```bash
+git clone https://github.com/dmgie/ClInt.git
+```
+(please note the capital "I" in case errors arise during `git clone`)
+
+Please also ensure that `Nextflow` has been installed on the system.
+
+Afterwards, the pipeline can be run using `nextflow run ./main.nf <...>` where `<...>` are various parameters outlined in `Instructions and Usage` below.
 
 ### Prerequisite
-<List of Programs>
+The pipeline utilises the following programs
+- *CircRNA*: DCC (circtools)
+- *MiRNA*: miRanda, TargetScan
+- *Mapping*: STAR, hisat
+- *Variant Calling*: GATK
+- *Others*: Nextflow, Singularity
 
-<Nextflow>
+*Nextflow* - This can be installed from their website: (here)[https://www.nextflow.io/]
 
-<Singularity & Docker>
+*Singularity* - The pipeline utilises various containers in order to supply the necessary programs. These are handled within the scripts (and each process) via `Singularity` containers.
 
-### Instructions
+### Instructions and Usage
 
-To use the pipeline, all that is needed is to give the necessary files in the command line when calling the Nextflow command. An example is given below.
+To use the pipeline, all that is needed is to provide the necessary files in the command line when calling the Nextflow command. An example is given below.
 
 ```sh
-nextflow run main.nf --reference_file ../ref_genome.fna --input_dir ../reads_data/ --gff_file ../ref_genome.gff  --output_dir ./
+nextflow run main.nf --reference_file ../ref_genome.fna --input_dir ../reads_data/ --gff_file ../ref_genome.gff  --output_dir ./results -profile singularity
 ```
 
-*Running inside Docker*:
-All that is required to do to run it within the given Docker container is to add the `-profile docker` command to the end of the `nextflow run ...` command. 
+These parameters can also be given in the form a YAML/JSON formatted nextflow configuration file and provided with the `-params-file` parameter (more information in (Nextflow's Documentation)[https://www.nextflow.io/docs/latest/config.html]). 
 
-To ensure that it runs, be sure to have built an image from the Dockerfile / `build_script.sh`.
+The output of the pipeline will then be provided in the foldering given to the `--output_dir` parameter.
 
 *Running inside Singularity*:
-Similarly to the Docker instruction, although instead of the `docker` profile, we use the `singularity` profile.
+All that is required to run the pipeline, is to provide either a local path to the main "ClInt.sif" singularity container, or a link to a library which hosts the container. To do this, inside the `nextflow.config` file, modify the singularity profile - specifically the `container` variable inside the `process` block. Either provide a relative (`file://<relative_path>`), absolute path (`file:///<absolute_path>`) or a link. If given a link, it will download the containers into a temporary/cache directory, defined by the system's `SINGULARITY_CACHEDIR` environment variable.
 
-This also requires having the Singularity image built, and available in the same directory as the `main.nf` file
-
-## Usage
 
 
 ## To Be Implemented
-- [] SLURM configuration
-- [] Strandedness and direction configuration
-- [] Submit singularity image to a repo or something to download from - prevent needing local build everytime
+- [] Submit singularity image to a accessible repo to avoid need of building container
+- [] The current implementation of the circRNA section of the pipeline is still incomplete. It has been heavily adapted from `nf-core/circRNA` in its current state. It is possible to run the circRNA detection and miRNA prediction steps separately using the output of the mapping step of the pipeline.
